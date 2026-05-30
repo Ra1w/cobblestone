@@ -1,5 +1,8 @@
 #include "core/types.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <chrono>
 #include <iomanip>
 #include <random>
 #include <sstream>
@@ -9,12 +12,14 @@ namespace core {
 // ID
 
 ID::ID(std::string value) : StringWrapper(std::move(value)) {
-  Validate(m_value);
+  Validate(m_value_);
 }
 
-bool ID::operator==(const ID& other) const { return m_value == other.m_value; }
+bool ID::operator==(const ID& other) const {
+  return m_value_ == other.m_value_;
+}
 bool ID::operator!=(const ID& other) const { return !(*this == other); }
-bool ID::operator<(const ID& other) const { return m_value < other.m_value; }
+bool ID::operator<(const ID& other) const { return m_value_ < other.m_value_; }
 
 void ID::Validate(const std::string& value) {
   if (value.empty()) {
@@ -43,13 +48,13 @@ ID ID::Generate() {
 // Title
 
 Title::Title(std::string value) : StringWrapper(std::move(value)) {
-  m_value.erase(0, m_value.find_first_not_of(" "));
-  m_value.erase(m_value.find_last_not_of(" ") + 1);
-  Validate(m_value);
+  m_value_.erase(0, m_value_.find_first_not_of(" "));
+  m_value_.erase(m_value_.find_last_not_of(" ") + 1);
+  Validate(m_value_);
 }
 
 bool Title::operator==(const Title& other) const {
-  return m_value == other.m_value;
+  return m_value_ == other.m_value_;
 }
 
 bool Title::operator!=(const Title& other) const { return !(*this == other); }
@@ -63,12 +68,28 @@ void Title::Validate(const std::string& val) {
   }
 }
 
+// Tag
+
+Tag::Tag(std::string value) : StringWrapper(std::move(value)) {
+  if (m_value_.empty()) throw ValidationError("Tag", "Value cannot be empty");
+  std::transform(m_value_.begin(), m_value_.end(), m_value_.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+}
+
+bool Tag::operator==(const Tag& other) const {
+  return m_value_ == other.m_value_;
+}
+
+bool Tag::operator<(const Tag& other) const {
+  return m_value_ < other.m_value_;
+}
+
 }  // namespace core
 
 namespace std {
 
 size_t hash<core::ID>::operator()(const core::ID& id) const {
-  return std::hash<std::string>{}(id.str());
+  return std::hash<std::string>{}(id.Str());
 }
 
 }  // namespace std

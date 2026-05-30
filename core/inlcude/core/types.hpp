@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <functional>
 #include <string>
 #include <vector>
@@ -12,11 +11,11 @@ namespace core {
 class StringWrapper {
  public:
   virtual ~StringWrapper() = default;
-  const std::string& str() const { return m_value; }
+  const std::string& Str() const { return m_value_; }
 
  protected:
-  explicit StringWrapper(std::string value) : m_value(std::move(value)) {}
-  std::string m_value;
+  explicit StringWrapper(std::string value) : m_value_(std::move(value)) {}
+  std::string m_value_;
 };
 
 class ID : public StringWrapper {
@@ -42,6 +41,16 @@ class Title : public StringWrapper {
  private:
   void Validate(const std::string& value);
 };
+
+class Tag : public StringWrapper {
+ public:
+  explicit Tag(std::string value);
+
+  bool operator==(const Tag& other) const;
+  bool operator<(const Tag& other) const;
+};
+
+using TagList = std::vector<Tag>;
 
 }  // namespace core
 
