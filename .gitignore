@@ -1,3 +1,6 @@
 build/
 
 tmp/
+
+.clang-tidy
+.clang-format
