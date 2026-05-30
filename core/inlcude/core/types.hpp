@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -20,20 +21,35 @@ class StringWrapper {
 
 class ID : public StringWrapper {
  public:
-  explicit ID(std::string value) : StringWrapper(std::move(value)) {
-    Validate(m_value);
-  }
-
+  explicit ID(std::string value);
   static ID Generate();
 
-  bool ID::operator==(const ID& other) const {
-    return m_value == other.m_value;
-  }
-  bool ID::operator!=(const ID& other) const { return !(*this == other); }
-  bool ID::operator<(const ID& other) const { return m_value < other.m_value; }
+  bool operator==(const ID& other) const;
+  bool operator!=(const ID& other) const;
+  bool operator<(const ID& other) const;
+
+ private:
+  void Validate(const std::string& value);
+};
+
+class Title : public StringWrapper {
+ public:
+  explicit Title(std::string value);
+
+  bool operator==(const Title& other) const;
+  bool operator!=(const Title& other) const;
 
  private:
   void Validate(const std::string& value);
 };
 
 }  // namespace core
+
+namespace std {
+
+template <>
+struct hash<core::ID> {
+  size_t operator()(const core::ID& id) const;
+};
+
+}  // namespace std
