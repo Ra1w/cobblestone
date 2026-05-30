@@ -84,6 +84,55 @@ bool Tag::operator<(const Tag& other) const {
   return m_value_ < other.m_value_;
 }
 
+// Timestamp
+
+Timestamp::Timestamp() : m_tp_(std::chrono::system_clock::now()) {}
+
+Timestamp::Timestamp(std::chrono::system_clock::time_point tp) : m_tp_(tp) {}
+
+Timestamp Timestamp::Now() { return Timestamp(); }
+
+bool Timestamp::operator==(const Timestamp& other) const {
+  return m_tp_ == other.m_tp_;
+}
+
+bool Timestamp::operator!=(const Timestamp& other) const {
+  return !(*this == other);
+}
+
+bool Timestamp::operator<(const Timestamp& other) const {
+  return m_tp_ < other.m_tp_;
+}
+
+bool Timestamp::operator>(const Timestamp& other) const {
+  return m_tp_ > other.m_tp_;
+}
+
+std::string Timestamp::ToIsoString() const {
+  std::time_t tt = std::chrono::system_clock::to_time_t(m_tp_);
+  std::tm gmt{};
+
+  gmtime_r(&tt, &gmt);
+
+  std::stringstream ss;
+  ss << std::put_time(&gmt, "%Y-%m-%dT%H:%M:%SZ");
+  return ss.str();
+}
+
+Timestamp Timestamp::FromIsoString(const std::string& iso_str) {
+  std::tm tm = {};
+  std::stringstream ss(iso_str);
+
+  ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+
+  if (ss.fail()) {
+    throw ValidationError("Timestamp", "Invalid ISO 8601 format: " + iso_str);
+  }
+
+  std::time_t tt = timegm(&tm);
+  return Timestamp(std::chrono::system_clock::from_time_t(tt));
+}
+
 }  // namespace core
 
 namespace std {
