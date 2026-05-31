@@ -17,4 +17,6 @@ class StringWrapper {
 
 enum class EntityType { Base, Task, Note };
 
+enum class TaskStatus { Todo, InProgress, Done };
+
 }  // namespace core

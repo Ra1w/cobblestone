@@ -4,8 +4,6 @@
 
 namespace core::entities {
 
-enum class TaskStatus { Todo, InProgress, Done };
-
 class Task : public Entity {
  public:
   Task(Metadata meta, std::string content = "",
