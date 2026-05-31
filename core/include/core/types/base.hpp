@@ -15,4 +15,6 @@ class StringWrapper {
   std::string value_;
 };
 
+enum class EntityType { Base, Task, Note };
+
 }  // namespace core
