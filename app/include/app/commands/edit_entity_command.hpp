@@ -1,14 +1,12 @@
 #pragma once
 
-#include <functional>
-
 #include "app/commands/command.hpp"
+#include "app/commands/edit_action.hpp"
 #include "core/entities/entity.hpp"
 #include "core/logic/registry.hpp"
+#include "core/types/id.hpp"
 
 namespace app::commands {
-
-using EditAction = std::function<void(core::entities::Entity&)>;
 
 class EditEntityCommand : public ICommand {
  public:

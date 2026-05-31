@@ -1,4 +1,5 @@
 #include "app/commands/edit_entity_command.hpp"
+
 #include "core/exceptions.hpp"
 
 namespace app::commands {
