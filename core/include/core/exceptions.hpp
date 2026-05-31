@@ -13,8 +13,8 @@ class CoreException : public std::runtime_error {
 class ValidationError : public CoreException {
  public:
   ValidationError(const std::string& field, const std::string& message)
-      : CoreException("Validation failed for [" + field + "]: " + message)
-      , field_(field) {}
+      : CoreException("Validation failed for [" + field + "]: " + message),
+        field_(field) {}
 
   const std::string& GetField() const { return field_; }
 
@@ -28,6 +28,11 @@ class LogicError : public CoreException {
 };
 
 class NotFoundError : public CoreException {
+ public:
+  using CoreException::CoreException;
+};
+
+class CommandError : public CoreException {
  public:
   using CoreException::CoreException;
 };
