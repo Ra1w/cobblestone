@@ -3,13 +3,13 @@
 namespace core {
 
 Title::Title(std::string value) : StringWrapper(std::move(value)) {
-  m_value_.erase(0, m_value_.find_first_not_of(" "));
-  m_value_.erase(m_value_.find_last_not_of(" ") + 1);
-  Validate(m_value_);
+  value_.erase(0, value_.find_first_not_of(" "));
+  value_.erase(value_.find_last_not_of(" ") + 1);
+  Validate(value_);
 }
 
 bool Title::operator==(const Title& other) const {
-  return m_value_ == other.m_value_;
+  return value_ == other.value_;
 }
 
 bool Title::operator!=(const Title& other) const { return !(*this == other); }

@@ -8,14 +8,12 @@
 namespace core {
 
 ID::ID(std::string value) : StringWrapper(std::move(value)) {
-  Validate(m_value_);
+  Validate(value_);
 }
 
-bool ID::operator==(const ID& other) const {
-  return m_value_ == other.m_value_;
-}
+bool ID::operator==(const ID& other) const { return value_ == other.value_; }
 bool ID::operator!=(const ID& other) const { return !(*this == other); }
-bool ID::operator<(const ID& other) const { return m_value_ < other.m_value_; }
+bool ID::operator<(const ID& other) const { return value_ < other.value_; }
 
 void ID::Validate(const std::string& value) {
   if (value.empty()) {

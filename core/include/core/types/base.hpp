@@ -8,11 +8,11 @@ namespace core {
 class StringWrapper {
  public:
   virtual ~StringWrapper() = default;
-  const std::string& Str() const { return m_value_; }
+  const std::string& Str() const { return value_; }
 
  protected:
-  explicit StringWrapper(std::string value) : m_value_(std::move(value)) {}
-  std::string m_value_;
+  explicit StringWrapper(std::string value) : value_(std::move(value)) {}
+  std::string value_;
 };
 
 }  // namespace core

@@ -22,10 +22,10 @@ class Timestamp {
   bool operator<(const Timestamp& other) const;
   bool operator>(const Timestamp& other) const;
 
-  std::chrono::system_clock::time_point Raw() const { return m_tp_; }
+  std::chrono::system_clock::time_point Raw() const { return tp_; }
 
  private:
-  std::chrono::system_clock::time_point m_tp_;
+  std::chrono::system_clock::time_point tp_;
 };
 
 }  // namespace core

@@ -14,12 +14,12 @@ class ValidationError : public CoreException {
  public:
   ValidationError(const std::string& field, const std::string& message)
       : CoreException("Validation failed for [" + field + "]: " + message)
-      , m_field(field) {}
+      , field_(field) {}
 
-  const std::string& GetField() const { return m_field; }
+  const std::string& GetField() const { return field_; }
 
  private:
-  std::string m_field;
+  std::string field_;
 };
 
 class LogicError : public CoreException {

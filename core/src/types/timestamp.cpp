@@ -7,26 +7,26 @@
 
 namespace core {
 
-Timestamp::Timestamp() : m_tp_(std::chrono::system_clock::now()) {}
-Timestamp::Timestamp(std::chrono::system_clock::time_point tp) : m_tp_(tp) {}
+Timestamp::Timestamp() : tp_(std::chrono::system_clock::now()) {}
+Timestamp::Timestamp(std::chrono::system_clock::time_point tp) : tp_(tp) {}
 Timestamp Timestamp::Now() { return Timestamp(); }
 
 bool Timestamp::operator==(const Timestamp& other) const {
-  return m_tp_ == other.m_tp_;
+  return tp_ == other.tp_;
 }
 bool Timestamp::operator!=(const Timestamp& other) const {
   return !(*this == other);
 }
 bool Timestamp::operator<(const Timestamp& other) const {
-  return m_tp_ < other.m_tp_;
+  return tp_ < other.tp_;
 }
 bool Timestamp::operator>(const Timestamp& other) const {
-  return m_tp_ > other.m_tp_;
+  return tp_ > other.tp_;
 }
 
 std::string Timestamp::ToIsoString() const {
   return std::format("{:%Y-%m-%dT%H:%M:%SZ}",
-                     std::chrono::floor<std::chrono::seconds>(m_tp_));
+                     std::chrono::floor<std::chrono::seconds>(tp_));
 }
 
 Timestamp Timestamp::FromIsoString(const std::string& iso_str) {
