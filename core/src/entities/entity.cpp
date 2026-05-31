@@ -1,0 +1,66 @@
+#include "core/entities/entity.hpp"
+#include "core/exceptions.hpp"
+
+#include <algorithm>
+
+namespace core::entities {
+
+Metadata::Metadata(ID id, Title title, TagList tags)
+    : id(std::move(id))
+    , title(std::move(title))
+    , tags(std::move(tags))
+    , created_at(Timestamp::Now())
+    , updated_at(created_at) {}
+
+Entity::Entity(Metadata meta, std::string content)
+    : meta_(std::move(meta)), content_(std::move(content)) {}
+
+void Entity::SetContent(std::string content) {
+  content_ = std::move(content);
+  UpdateTimestamp();
+}
+
+void Entity::SetTitle(Title title) {
+  meta_.title = std::move(title);
+  UpdateTimestamp();
+}
+
+void Entity::SetTags(TagList tags) {
+  meta_.tags = std::move(tags);
+  UpdateTimestamp();
+}
+
+void Entity::UpdateTimestamp() { meta_.updated_at = Timestamp::Now(); }
+
+void Entity::AddChild(std::unique_ptr<Entity> child) {
+  if (!child) {
+    throw LogicError(
+        "Entity::AddChild: attempt to add a null pointer as a child");
+  }
+
+  if (child.get() == this) {
+    throw LogicError(
+        "Entity::AddChild: circular dependency detected (an entity cannot be "
+        "its own child)");
+  }
+
+  child->parent_ = this;
+  children_.push_back(std::move(child));
+  UpdateTimestamp();
+}
+
+std::unique_ptr<Entity> Entity::RemoveChild(const ID& id) {
+  auto it =
+      std::find_if(children_.begin(), children_.end(),
+                   [&id](const auto& child) { return child->meta_.id == id; });
+  if (it != children_.end()) {
+    std::unique_ptr<Entity> removed = std::move(*it);
+    removed->parent_ = nullptr;
+    children_.erase(it);
+    UpdateTimestamp();
+    return removed;
+  }
+  return nullptr;
+}
+
+}  // namespace core::entities
