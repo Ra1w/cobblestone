@@ -71,6 +71,23 @@ class Registry {
     return results;
   }
 
+  T* FindDeep(const ID& id) const {
+    std::shared_lock lock(mutex_);
+
+    auto it = items_.find(id);
+    if (it != items_.end()) {
+      return it->second.get();
+    }
+
+    for (const auto& [root_id, item] : items_) {
+      T* found = FindRecursive(item.get(), id);
+      if (found) {
+        return found;
+      }
+    }
+    return nullptr;
+  }
+
   size_t Count() const {
     std::shared_lock lock(mutex_);
     return items_.size();
@@ -84,6 +101,19 @@ class Registry {
  private:
   mutable std::shared_mutex mutex_;
   std::unordered_map<ID, std::unique_ptr<T>> items_;
+
+  T* FindRecursive(T* current, const ID& id) const {
+    if (current->GetId() == id) {
+      return current;
+    }
+    for (const auto& child : current->GetChildren()) {
+      T* found = FindRecursive(child.get(), id);
+      if (found) {
+        return found;
+      }
+    }
+    return nullptr;
+  }
 };
 
 }  // namespace core::logic
