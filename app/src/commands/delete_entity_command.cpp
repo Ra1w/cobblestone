@@ -6,8 +6,33 @@ DeleteEntityCommand::DeleteEntityCommand(
     core::logic::Registry<core::entities::Entity>& registry, const core::ID& id)
     : registry_(registry), id_(id) {}
 
-void DeleteEntityCommand::Execute() { entity_ = registry_.Remove(id_); }
+void DeleteEntityCommand::Execute() {
+  parent_id_ = std::nullopt;
 
-void DeleteEntityCommand::Undo() { registry_.Add(std::move(entity_)); }
+  auto* target = registry_.FindDeep(id_);
+  if (target != nullptr) {
+    if (target->GetParent() != nullptr) {
+      parent_id_ = target->GetParent()->GetId();
+    }
+  }
+
+  entity_ = registry_.Remove(id_);
+}
+
+void DeleteEntityCommand::Undo() {
+  if (!entity_) {
+    return;
+  }
+
+  if (parent_id_.has_value()) {
+    auto* parent = registry_.FindDeep(*parent_id_);
+    if (parent != nullptr) {
+      parent->AddChild(std::move(entity_));
+      return;
+    }
+  }
+
+  registry_.Add(std::move(entity_));
+}
 
 }  // namespace app::commands
