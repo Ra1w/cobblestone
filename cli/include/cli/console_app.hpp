@@ -12,6 +12,9 @@ class ConsoleApp {
   explicit ConsoleApp(app::LifeEngine& engine);
   ~ConsoleApp() = default;
 
+  ConsoleApp(const ConsoleApp&) = delete;
+  ConsoleApp& operator=(const ConsoleApp&) = delete;
+
   void Run();
 
  private:
@@ -21,15 +24,29 @@ class ConsoleApp {
   void ProcessInput(const std::string& input);
 
   void ShowHelp();
+
   void ListRoot();
+
   void CreateTask();
   void CreateNote();
+
   void DeleteEntity();
   void MoveEntity();
+
   void Undo();
   void Redo();
 
+  void ViewEntity();
+
+  void EditContent();
+
+  void RenameEntity();
+
+  void SetStatus();
+
   void PrintTree(const core::entities::Entity& entity, int depth);
+
+  core::TaskStatus ParseStatus(const std::string& status_str);
 };
 
 }  // namespace cli
