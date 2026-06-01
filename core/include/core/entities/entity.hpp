@@ -34,7 +34,7 @@ class Entity {
   Entity(Entity&&) noexcept = default;
   Entity& operator=(Entity&&) noexcept = default;
 
-  const ID& Entity::GetId() const { return meta_.id; }
+  const ID& GetId() const { return meta_.id; }
   const Metadata& GetMetadata() const { return meta_; }
   const std::string& GetContent() const { return content_; }
   Entity* GetParent() const { return parent_; }
