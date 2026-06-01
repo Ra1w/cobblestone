@@ -37,4 +37,9 @@ class CommandError : public CoreException {
   using CoreException::CoreException;
 };
 
+class SystemError : public CoreException {
+ public:
+  using CoreException::CoreException;
+};
+
 }  // namespace core
