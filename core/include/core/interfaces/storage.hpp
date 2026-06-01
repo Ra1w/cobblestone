@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/entities/entity.hpp"
+#include "core/interfaces/persistence_entry.hpp"
 
 namespace core::interfaces {
 
@@ -14,7 +15,7 @@ class IStorage {
 
   virtual std::future<void> SaveAsync(const entities::Entity& entity) = 0;
 
-  virtual std::vector<std::unique_ptr<entities::Entity>> LoadAll() = 0;
+  virtual std::vector<PersistenceEntry> LoadAll() = 0;
 
   virtual void Remove(const ID& id) = 0;
 };
