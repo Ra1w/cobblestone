@@ -69,6 +69,48 @@ class Registry {
     return removed;
   }
 
+  ID ResolveId(const std::string& prefix) const {
+    std::shared_lock lock(mutex_);
+
+    for (const auto& [id, item] : items_) {
+      if (id.Str() == prefix) {
+        return id;
+      }
+    }
+
+    std::vector<ID> matches;
+
+    std::function<void(const core::entities::Entity&)> collect_ids;
+    collect_ids = [&](const core::entities::Entity& e) {
+      if (e.GetId().Str().starts_with(prefix)) {
+        matches.push_back(e.GetId());
+      }
+      for (const auto& child : e.GetChildren()) {
+        collect_ids(*child);
+      }
+    };
+
+    for (const auto& [id, item] : items_) {
+      collect_ids(*item);
+    }
+
+    if (matches.empty()) {
+      throw NotFoundError("Registry: No entity found with prefix [" + prefix +
+                          "]");
+    }
+
+    if (matches.size() > 1) {
+      std::string error_msg =
+          "Registry: Ambiguous prefix [" + prefix + "]. Matches: ";
+      for (const auto& m : matches) {
+        error_msg += m.Str() + " ";
+      }
+      throw CommandError(error_msg);
+    }
+
+    return matches[0];
+  }
+
   template <typename Predicate>
   std::vector<T*> FindIf(Predicate predicate) const {
     std::shared_lock lock(mutex_);

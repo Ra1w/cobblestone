@@ -46,6 +46,8 @@ class LifeEngine {
 
   std::vector<core::entities::Entity*> GetRootEntities() const;
 
+  core::ID ResolveId(const std::string& prefix) const;
+
  private:
   core::logic::Registry<core::entities::Entity> registry_;
   commands::CommandManager command_manager_;
