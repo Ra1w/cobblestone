@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+
 #include "app/commands/command.hpp"
 #include "core/entities/entity.hpp"
 #include "core/logic/registry.hpp"
@@ -18,6 +21,7 @@ class DeleteEntityCommand : public ICommand {
   core::logic::Registry<core::entities::Entity>& registry_;
   std::unique_ptr<core::entities::Entity> entity_;
   core::ID id_;
+  std::optional<core::ID> parent_id_;
 };
 
 }  // namespace app::commands
