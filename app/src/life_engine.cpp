@@ -1,15 +1,87 @@
 #include "app/life_engine.hpp"
 
+#include <algorithm>
+#include <chrono>
+
 #include "app/commands/add_entity_command.hpp"
 #include "app/commands/delete_entity_command.hpp"
 #include "app/commands/edit_entity_command.hpp"
 #include "app/commands/move_entity_command.hpp"
 #include "core/entities/note.hpp"
 #include "core/entities/task.hpp"
+#include "core/exceptions.hpp"
 
 namespace app {
 
-LifeEngine::LifeEngine() : registry_(), command_manager_() {}
+LifeEngine::LifeEngine(std::unique_ptr<core::interfaces::IStorage> storage)
+    : storage_(std::move(storage)) {}
+
+LifeEngine::~LifeEngine() { WaitAllSaves(); }
+
+void LifeEngine::Load() {
+  if (!storage_) {
+    return;
+  }
+
+  auto entries = storage_->LoadAll();
+
+  struct Link {
+    core::ID child_id;
+    core::ID parent_id;
+  };
+
+  std::vector<Link> pending_links;
+
+  for (auto& entry : entries) {
+    if (entry.parent_id.has_value()) {
+      pending_links.push_back({entry.entity->GetId(), *entry.parent_id});
+    }
+    registry_.Add(std::move(entry.entity));
+  }
+
+  for (const auto& link : pending_links) {
+    try {
+      auto* parent = registry_.Get(link.parent_id);
+      if (parent != nullptr) {
+        auto child = registry_.Remove(link.child_id);
+        parent->AddChild(std::move(child));
+      }
+    } catch (const core::CoreException&) {
+    }
+  }
+}
+
+void LifeEngine::SaveAll() {
+  if (!storage_) {
+    return;
+  }
+
+  std::erase_if(pending_saves_, [](std::future<void>& f) {
+    return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+  });
+
+  auto roots = GetRootEntities();
+  for (auto* root : roots) {
+    SaveRecursive(*root);
+  }
+}
+
+void LifeEngine::SaveRecursive(const core::entities::Entity& entity) {
+  pending_saves_.push_back(storage_->SaveAsync(entity));
+
+  for (const auto& child : entity.GetChildren()) {
+    SaveRecursive(*child);
+  }
+}
+
+void LifeEngine::WaitAllSaves() {
+  for (auto& f : pending_saves_) {
+    if (f.valid()) {
+      f.get();
+    }
+  }
+  pending_saves_.clear();
+}
 
 void LifeEngine::CreateTask(const core::Title& title,
                             const std::string& content) {
@@ -30,9 +102,15 @@ void LifeEngine::CreateNote(const core::Title& title,
 }
 
 void LifeEngine::RemoveEntity(const core::ID& id) {
+  if (storage_) {
+    storage_->Remove(id);
+  }
+
   command_manager_.Invoke(
       std::make_unique<commands::DeleteEntityCommand>(registry_, id));
 }
+
+
 
 void LifeEngine::MoveEntity(const core::ID& entity_id,
                             std::optional<core::ID> parent_id) {

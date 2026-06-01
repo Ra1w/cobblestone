@@ -1,5 +1,6 @@
 #pragma once
 
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
@@ -8,6 +9,7 @@
 #include "app/commands/command_manager.hpp"
 #include "app/commands/edit_action.hpp"
 #include "core/entities/entity.hpp"
+#include "core/interfaces/storage.hpp"
 #include "core/logic/registry.hpp"
 #include "core/types/id.hpp"
 #include "core/types/title.hpp"
@@ -16,11 +18,15 @@ namespace app {
 
 class LifeEngine {
  public:
-  LifeEngine();
-  ~LifeEngine() = default;
+  explicit LifeEngine(std::unique_ptr<core::interfaces::IStorage> storage);
+  ~LifeEngine();
 
   LifeEngine(const LifeEngine&) = delete;
   LifeEngine& operator=(const LifeEngine&) = delete;
+
+  void Load();
+  void SaveAll();
+  void WaitAllSaves();
 
   void CreateTask(const core::Title& title, const std::string& content);
   void CreateNote(const core::Title& title, const std::string& content);
@@ -43,6 +49,11 @@ class LifeEngine {
  private:
   core::logic::Registry<core::entities::Entity> registry_;
   commands::CommandManager command_manager_;
+  std::unique_ptr<core::interfaces::IStorage> storage_;
+
+  std::vector<std::future<void>> pending_saves_;
+
+  void SaveRecursive(const core::entities::Entity& entity);
 };
 
 }  // namespace app
