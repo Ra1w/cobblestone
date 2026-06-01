@@ -137,10 +137,12 @@ void ConsoleApp::PrintTree(const core::entities::Entity& entity, int depth) {
 
 void ConsoleApp::ViewEntity() {
   std::cout << "Enter Entity ID: ";
-  std::string id_str;
-  std::getline(std::cin, id_str);
+  std::string input;
+  std::getline(std::cin, input);
 
-  auto* entity = engine_.GetEntity(core::ID(id_str));
+  core::ID id = engine_.ResolveId(input);
+  auto* entity = engine_.GetEntity(id);
+  
   if (!entity) {
     std::cout << "Entity not found.\n";
     return;
@@ -196,69 +198,75 @@ void ConsoleApp::CreateNote() {
 
 void ConsoleApp::DeleteEntity() {
   std::cout << "Enter ID to delete: ";
-  std::string id_str;
-  std::getline(std::cin, id_str);
+  std::string input;
+  std::getline(std::cin, input);
 
-  engine_.RemoveEntity(core::ID(id_str));
+  core::ID id = engine_.ResolveId(input);
+  engine_.RemoveEntity(id);
   std::cout << "Entity and its file marked for deletion.\n";
 }
 
 void ConsoleApp::MoveEntity() {
-  std::string child_id;
-  std::string parent_id;
+  std::string child_input;
+  std::string parent_input;
   std::cout << "Enter Entity ID to move: ";
-  std::getline(std::cin, child_id);
+  std::getline(std::cin, child_input);
   std::cout << "Enter New Parent ID (or leave empty for root): ";
-  std::getline(std::cin, parent_id);
+  std::getline(std::cin, parent_input);
 
+  core::ID child_id = engine_.ResolveId(child_input);
+  
   std::optional<core::ID> p_id;
-  if (!parent_id.empty()) {
-    p_id = core::ID(parent_id);
+  if (!parent_input.empty()) {
+    p_id = engine_.ResolveId(parent_input);
   }
 
-  engine_.MoveEntity(core::ID(child_id), p_id);
+  engine_.MoveEntity(child_id, p_id);
   std::cout << "Entity moved successfully.\n";
 }
 
 void ConsoleApp::EditContent() {
-  std::string id_str;
+  std::string input;
   std::string new_content;
   std::cout << "Enter Entity ID: ";
-  std::getline(std::cin, id_str);
+  std::getline(std::cin, input);
   std::cout << "Enter New Content: ";
   std::getline(std::cin, new_content);
 
+  core::ID id = engine_.ResolveId(input);
   engine_.EditEntity(
-      core::ID(id_str),
+      id,
       [new_content](core::entities::Entity& e) { e.SetContent(new_content); });
   std::cout << "Content updated.\n";
 }
 
 void ConsoleApp::RenameEntity() {
-  std::string id_str;
+  std::string input;
   std::string new_title;
   std::cout << "Enter Entity ID: ";
-  std::getline(std::cin, id_str);
+  std::getline(std::cin, input);
   std::cout << "Enter New Title: ";
   std::getline(std::cin, new_title);
 
-  engine_.EditEntity(core::ID(id_str), [new_title](core::entities::Entity& e) {
+  core::ID id = engine_.ResolveId(input);
+  engine_.EditEntity(id, [new_title](core::entities::Entity& e) {
     e.SetTitle(core::Title(new_title));
   });
   std::cout << "Entity renamed.\n";
 }
 
 void ConsoleApp::SetStatus() {
-  std::string id_str;
+  std::string input;
   std::string status_str;
   std::cout << "Enter Task ID: ";
-  std::getline(std::cin, id_str);
+  std::getline(std::cin, input);
   std::cout << "New Status (todo / inprogress / done): ";
   std::getline(std::cin, status_str);
 
+  core::ID id = engine_.ResolveId(input);
   core::TaskStatus status = ParseStatus(status_str);
 
-  engine_.EditEntity(core::ID(id_str), [status](core::entities::Entity& e) {
+  engine_.EditEntity(id, [status](core::entities::Entity& e) {
     if (e.GetType() == core::EntityType::Task) {
       static_cast<core::entities::Task&>(e).SetStatus(status);
     } else {

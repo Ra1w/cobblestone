@@ -110,8 +110,6 @@ void LifeEngine::RemoveEntity(const core::ID& id) {
       std::make_unique<commands::DeleteEntityCommand>(registry_, id));
 }
 
-
-
 void LifeEngine::MoveEntity(const core::ID& entity_id,
                             std::optional<core::ID> parent_id) {
   command_manager_.Invoke(std::make_unique<commands::MoveEntityCommand>(
@@ -138,6 +136,10 @@ core::entities::Entity* LifeEngine::GetEntity(const core::ID& id) const {
 std::vector<core::entities::Entity*> LifeEngine::GetRootEntities() const {
   return registry_.FindIf(
       [](const core::entities::Entity& e) { return e.GetParent() == nullptr; });
+}
+
+core::ID LifeEngine::ResolveId(const std::string& prefix) const {
+  return registry_.ResolveId(prefix);
 }
 
 }  // namespace app
