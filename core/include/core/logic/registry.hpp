@@ -46,11 +46,21 @@ class Registry {
 
   std::unique_ptr<T> Remove(const ID& id) {
     std::unique_lock lock(mutex_);
-    auto it = items_.find(id);
 
-    if (it == items_.end()) {
-      throw NotFoundError("Registry::Remove: Entity with ID [" + id.Str() +
+    T* target = FindDeepInternal(id);
+    if (!target) {
+      throw NotFoundError("Registry::Remove: Entity [" + id.Str() +
                           "] not found");
+    }
+
+    auto* parent = target->GetParent();
+    if (parent != nullptr) {
+      return parent->RemoveChild(id);
+    }
+
+    auto it = items_.find(id);
+    if (it == items_.end()) {
+      throw LogicError("Registry::Remove: Internal inconsistency error");
     }
 
     std::unique_ptr<T> removed = std::move(it->second);
@@ -73,19 +83,7 @@ class Registry {
 
   T* FindDeep(const ID& id) const {
     std::shared_lock lock(mutex_);
-
-    auto it = items_.find(id);
-    if (it != items_.end()) {
-      return it->second.get();
-    }
-
-    for (const auto& [root_id, item] : items_) {
-      T* found = FindRecursive(item.get(), id);
-      if (found) {
-        return found;
-      }
-    }
-    return nullptr;
+    return FindDeepInternal(id);
   }
 
   size_t Count() const {
@@ -102,9 +100,24 @@ class Registry {
   mutable std::shared_mutex mutex_;
   std::unordered_map<ID, std::unique_ptr<T>> items_;
 
+  T* FindDeepInternal(const ID& id) const {
+    auto it = items_.find(id);
+    if (it != items_.end()) {
+      return it->second.get();
+    }
+
+    for (const auto& [root_id, item] : items_) {
+      T* found = FindRecursive(item.get(), id);
+      if (found) {
+        return found;
+      }
+    }
+    return nullptr;
+  }
+
   T* FindRecursive(T* current, const ID& id) const {
     if (current->GetId() == id) {
-      return current;
+      return dynamic_cast<T*>(current);
     }
     for (const auto& child : current->GetChildren()) {
       T* found = FindRecursive(child.get(), id);
