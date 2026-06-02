@@ -1,11 +1,11 @@
 #include "cli/console_app.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <format>
 #include <iostream>
-#include <sstream>
 #include <optional>
-#include <cctype>
+#include <sstream>
 
 #include "core/entities/task.hpp"
 #include "core/exceptions.hpp"
@@ -84,7 +84,8 @@ void ConsoleApp::ProcessInput(const std::string& input) {
     std::cout << std::format("Error: {}\n", e.what());
   } catch (const std::logic_error& e) {
     std::cerr << std::format("CRITICAL SOFTWARE BUG: {}\n", e.what());
-    std::cerr << "The application state may be corrupted. Please report this.\n";
+    std::cerr
+        << "The application state may be corrupted. Please report this.\n";
   } catch (const std::exception& e) {
     std::cerr << std::format("Unknown System Error: {}\n", e.what());
   }
@@ -151,7 +152,7 @@ void ConsoleApp::ViewEntity() {
 
   core::ID id = engine_.ResolveId(input);
   auto* entity = engine_.GetEntity(id);
-  
+
   if (!entity) {
     std::cout << "Entity not found.\n";
     return;
@@ -224,7 +225,7 @@ void ConsoleApp::MoveEntity() {
   std::getline(std::cin, parent_input);
 
   core::ID child_id = engine_.ResolveId(child_input);
-  
+
   std::optional<core::ID> p_id;
   if (!parent_input.empty()) {
     p_id = engine_.ResolveId(parent_input);
@@ -243,9 +244,9 @@ void ConsoleApp::EditContent() {
   std::getline(std::cin, new_content);
 
   core::ID id = engine_.ResolveId(input);
-  engine_.EditEntity(
-      id,
-      [new_content](core::entities::Entity& e) { e.SetContent(new_content); });
+  engine_.EditEntity(id, [new_content](core::entities::Entity& e) {
+    e.SetContent(new_content);
+  });
   std::cout << "Content updated.\n";
 }
 
@@ -307,9 +308,17 @@ core::TaskStatus ConsoleApp::ParseStatus(const std::string& status_str) {
   std::string s = status_str;
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 
-  if (s == "done") return core::TaskStatus::Done;
-  if (s == "inprogress") return core::TaskStatus::InProgress;
-  if (s == "todo") return core::TaskStatus::Todo;
+  if (s == "done") {
+    return core::TaskStatus::Done;
+  }
+
+  if (s == "inprogress") {
+    return core::TaskStatus::InProgress;
+  }
+
+  if (s == "todo") {
+    return core::TaskStatus::Todo;
+  }
 
   throw core::ValidationError(
       "TaskStatus", "Unknown status. Use 'todo', 'inprogress', or 'done'.");
