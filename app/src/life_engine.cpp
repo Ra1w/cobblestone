@@ -94,12 +94,30 @@ void LifeEngine::CreateNote(const core::Title& title,
 }
 
 void LifeEngine::RemoveEntity(const core::ID& id) {
+  std::vector<core::ID> ids_to_remove;
+
   if (storage_) {
-    storage_->Remove(id);
+    auto* target = registry_.Get(id);
+    if (target != nullptr) {
+      std::function<void(const core::entities::Entity*)> gather =
+          [&](const core::entities::Entity* e) {
+            ids_to_remove.push_back(e->GetId());
+            for (const auto& child : e->GetChildren()) {
+              gather(child.get());
+            }
+          };
+      gather(target);
+    }
   }
 
   command_manager_.Invoke(
       std::make_unique<commands::DeleteEntityCommand>(registry_, id));
+
+  if (storage_) {
+    for (const auto& r_id : ids_to_remove) {
+      storage_->Remove(r_id);
+    }
+  }
 }
 
 void LifeEngine::MoveEntity(const core::ID& entity_id,
