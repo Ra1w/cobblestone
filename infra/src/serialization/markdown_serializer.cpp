@@ -21,7 +21,7 @@ std::string MarkdownSerializer::Serialize(const ce::Entity& entity) {
     type_str = "task";
   }
 
-  std::string extra_fields;
+  std::string extra_fields = "";
   if (entity.GetType() == ct::EntityType::Task) {
     const auto& task = static_cast<const ce::Task&>(entity);
     ct::TaskStatus s = task.GetStatus();
@@ -73,8 +73,8 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
   size_t second_sep = raw_content.find(sep, first_sep + sep.length());
 
   if (first_sep == std::string::npos || second_sep == std::string::npos) {
-    throw ct::ValidationError("Markdown",
-                              "Invalid file format: YAML header missing");
+    throw ct::PersistenceError(
+        "MarkdownSerializer: Invalid file format (YAML header missing)");
   }
 
   std::string yaml = raw_content.substr(
@@ -86,8 +86,19 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
     content = raw_content.substr(end_of_header_line + 1);
   }
 
-  ct::ID id(ExtractYamlValue(yaml, "id"));
+  std::string id_raw = ExtractYamlValue(yaml, "id");
+  if (id_raw.empty()) {
+    throw ct::PersistenceError(
+        "MarkdownSerializer: Missing mandatory field [id]");
+  }
+
   std::string type = ExtractYamlValue(yaml, "type");
+  if (type.empty()) {
+    throw ct::PersistenceError(
+        "MarkdownSerializer: Missing mandatory field [type]");
+  }
+
+  ct::ID id(id_raw);
   ct::Title title(ExtractYamlValue(yaml, "title"));
   auto tags = ParseTags(ExtractYamlValue(yaml, "tags"));
   auto created =
@@ -124,31 +135,32 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
 
 std::string MarkdownSerializer::ExtractYamlValue(const std::string& yaml,
                                                  const std::string& key) {
-  std::string full_key = key + ":";
-  size_t pos = yaml.find(full_key);
-
-  while (pos != std::string::npos) {
-    if (pos == 0 || yaml[pos - 1] == '\n') {
-      size_t val_start = pos + full_key.length();
-      size_t val_end = yaml.find('\n', val_start);
-
-      std::string val;
-      if (val_end == std::string::npos) {
-        val = yaml.substr(val_start);
-      } else {
-        val = yaml.substr(val_start, val_end - val_start);
-      }
-
-      size_t first = val.find_first_not_of(" ");
-      if (first == std::string::npos) {
-        return "";
-      }
-      size_t last = val.find_last_not_of(" \r");
-      return val.substr(first, (last - first + 1));
+  std::string full_key = "\n" + key + ":";
+  size_t pos = yaml.find(key + ":");
+  if (pos != 0) {
+    pos = yaml.find(full_key);
+    if (pos == std::string::npos) {
+      return "";
     }
-    pos = yaml.find(full_key, pos + 1);
+    pos += 1;
   }
-  return "";
+
+  size_t val_start = pos + key.length() + 1;
+  size_t val_end = yaml.find('\n', val_start);
+
+  std::string val;
+  if (val_end == std::string::npos) {
+    val = yaml.substr(val_start);
+  } else {
+    val = yaml.substr(val_start, val_end - val_start);
+  }
+
+  size_t first = val.find_first_not_of(" ");
+  if (first == std::string::npos) {
+    return "";
+  }
+  size_t last = val.find_last_not_of(" \r");
+  return val.substr(first, (last - first + 1));
 }
 
 std::vector<ct::Tag> MarkdownSerializer::ParseTags(
