@@ -135,32 +135,22 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
 
 std::string MarkdownSerializer::ExtractYamlValue(const std::string& yaml,
                                                  const std::string& key) {
-  std::string full_key = "\n" + key + ":";
-  size_t pos = yaml.find(key + ":");
-  if (pos != 0) {
-    pos = yaml.find(full_key);
-    if (pos == std::string::npos) {
-      return "";
+  std::stringstream ss(yaml);
+  std::string line;
+  std::string target = key + ":";
+
+  while (std::getline(ss, line)) {
+    if (line.starts_with(target)) {
+      std::string val = line.substr(target.length());
+      size_t first = val.find_first_not_of(" \r\t");
+      if (first == std::string::npos) {
+        return "";
+      }
+      size_t last = val.find_last_not_of(" \r\t");
+      return val.substr(first, (last - first + 1));
     }
-    pos += 1;
   }
-
-  size_t val_start = pos + key.length() + 1;
-  size_t val_end = yaml.find('\n', val_start);
-
-  std::string val;
-  if (val_end == std::string::npos) {
-    val = yaml.substr(val_start);
-  } else {
-    val = yaml.substr(val_start, val_end - val_start);
-  }
-
-  size_t first = val.find_first_not_of(" ");
-  if (first == std::string::npos) {
-    return "";
-  }
-  size_t last = val.find_last_not_of(" \r");
-  return val.substr(first, (last - first + 1));
+  return "";
 }
 
 std::vector<ct::Tag> MarkdownSerializer::ParseTags(

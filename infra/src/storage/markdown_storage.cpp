@@ -30,7 +30,8 @@ MarkdownStorage::~MarkdownStorage() {
 
 std::future<void> MarkdownStorage::SaveAsync(
     const core::entities::Entity& entity) {
-  auto task = std::make_unique<SaveTask>();
+  auto task = std::make_unique<StorageTask>();
+  task->type = StorageTask::Type::Save;
   task->path = GetPath(entity.GetId());
   task->content = infra::serialization::MarkdownSerializer::Serialize(entity);
 
@@ -47,7 +48,7 @@ std::future<void> MarkdownStorage::SaveAsync(
 
 void MarkdownStorage::WorkerLoop() {
   while (true) {
-    std::unique_ptr<SaveTask> task;
+    std::unique_ptr<StorageTask> task;
     {
       std::unique_lock lock(queue_mutex_);
       cv_.wait(lock, [this] { return !tasks_.empty() || !running_; });
@@ -64,11 +65,17 @@ void MarkdownStorage::WorkerLoop() {
 
     if (task) {
       try {
-        std::ofstream file(task->path, std::ios::trunc);
-        if (!file.is_open()) {
-          throw core::SystemError("Cannot open file: " + task->path.string());
+        if (task->type == StorageTask::Type::Save) {
+          std::ofstream file(task->path, std::ios::trunc);
+          if (!file.is_open()) {
+            throw core::SystemError("Cannot open file: " + task->path.string());
+          }
+          file << task->content;
+        } else if (task->type == StorageTask::Type::Remove) {
+          if (std::filesystem::exists(task->path)) {
+            std::filesystem::remove(task->path);
+          }
         }
-        file << task->content;
         task->promise.set_value();
       } catch (...) {
         task->promise.set_exception(std::current_exception());
@@ -104,10 +111,15 @@ std::vector<core::interfaces::PersistenceEntry> MarkdownStorage::LoadAll() {
 }
 
 void MarkdownStorage::Remove(const core::ID& id) {
-  std::filesystem::path p = GetPath(id);
-  if (std::filesystem::exists(p)) {
-    std::filesystem::remove(p);
+  auto task = std::make_unique<StorageTask>();
+  task->type = StorageTask::Type::Remove;
+  task->path = GetPath(id);
+
+  {
+    std::lock_guard lock(queue_mutex_);
+    tasks_.push(std::move(task));
   }
+  cv_.notify_one();
 }
 
 std::filesystem::path MarkdownStorage::GetPath(const core::ID& id) const {
