@@ -12,4 +12,8 @@ std::unique_ptr<Entity> Note::Clone() const {
   return clone;
 }
 
+std::unique_ptr<Entity> Note::CloneWithoutChildren() const {
+  return std::make_unique<Note>(meta_, content_);
+}
+
 }  // namespace core::entities

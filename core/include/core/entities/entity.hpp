@@ -25,7 +25,6 @@ struct Metadata {
 class Entity {
  public:
   Entity(Metadata meta, std::string content = "");
-
   virtual ~Entity() = default;
 
   Entity(const Entity&) = delete;
@@ -46,8 +45,8 @@ class Entity {
   void SetTitle(Title title);
   void SetTags(TagList tags);
 
-  void RestoreState(Title title, TagList tags, std::string content,
-                    Timestamp updated);
+  virtual void RestoreStateFrom(const Entity& other);
+  virtual std::unique_ptr<Entity> CloneWithoutChildren() const = 0;
 
   void AddChild(std::unique_ptr<Entity> child);
   std::unique_ptr<Entity> RemoveChild(const ID& id);

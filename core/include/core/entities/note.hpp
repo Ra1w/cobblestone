@@ -10,6 +10,8 @@ class Note : public Entity {
 
   EntityType GetType() const override { return EntityType::Note; }
   std::unique_ptr<Entity> Clone() const override;
+
+  std::unique_ptr<Entity> CloneWithoutChildren() const override;
 };
 
 }  // namespace core::entities

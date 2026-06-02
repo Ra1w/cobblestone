@@ -1,5 +1,4 @@
 #include "app/commands/edit_entity_command.hpp"
-
 #include "core/exceptions.hpp"
 
 namespace app::commands {
@@ -9,8 +8,7 @@ EditEntityCommand::EditEntityCommand(
     EditAction action)
     : registry_(registry),
       id_(id),
-      action_(std::move(action)),
-      memento_meta_(core::ID("temp"), core::Title("temp"), {}) {}
+      action_(std::move(action)) {}
 
 void EditEntityCommand::Execute() {
   auto* entity = registry_.Get(id_);
@@ -19,19 +17,17 @@ void EditEntityCommand::Execute() {
         "EditEntityCommand: Entity not found for editing");
   }
 
-  memento_meta_ = entity->GetMetadata();
-  memento_content_ = entity->GetContent();
+  memento_ = entity->CloneWithoutChildren();
   action_(*entity);
 }
 
 void EditEntityCommand::Undo() {
   auto* entity = registry_.Get(id_);
-  if (entity == nullptr) {
+  if (entity == nullptr || memento_ == nullptr) {
     return;
   }
 
-  entity->RestoreState(memento_meta_.title, memento_meta_.tags,
-                       memento_content_, memento_meta_.updated_at);
+  entity->RestoreStateFrom(*memento_);
 }
 
 }  // namespace app::commands

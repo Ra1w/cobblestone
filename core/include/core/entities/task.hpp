@@ -15,6 +15,9 @@ class Task : public Entity {
   TaskStatus GetStatus() const { return status_; }
   void SetStatus(TaskStatus status);
 
+  std::unique_ptr<Entity> CloneWithoutChildren() const override;
+  void RestoreStateFrom(const Entity& other) override;
+
  private:
   TaskStatus status_;
 };
