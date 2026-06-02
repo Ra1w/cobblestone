@@ -31,6 +31,14 @@ void Entity::SetTags(TagList tags) {
   UpdateTimestamp();
 }
 
+void Entity::RestoreState(Title title, TagList tags, std::string content,
+                          Timestamp updated) {
+  meta_.title = std::move(title);
+  meta_.tags = std::move(tags);
+  meta_.updated_at = updated;
+  content_ = std::move(content);
+}
+
 void Entity::UpdateTimestamp() { meta_.updated_at = Timestamp::Now(); }
 
 void Entity::AddChild(std::unique_ptr<Entity> child) {

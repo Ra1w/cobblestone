@@ -26,13 +26,12 @@ void EditEntityCommand::Execute() {
 
 void EditEntityCommand::Undo() {
   auto* entity = registry_.Get(id_);
-  if (!entity) {
+  if (entity == nullptr) {
     return;
   }
 
-  entity->SetTitle(memento_meta_.title);
-  entity->SetTags(memento_meta_.tags);
-  entity->SetContent(memento_content_);
+  entity->RestoreState(memento_meta_.title, memento_meta_.tags,
+                       memento_content_, memento_meta_.updated_at);
 }
 
 }  // namespace app::commands
