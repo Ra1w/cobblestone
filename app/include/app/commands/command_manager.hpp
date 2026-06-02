@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <stack>
+#include <deque>
 
 #include "app/commands/command.hpp"
 
@@ -23,8 +23,10 @@ class CommandManager {
   bool CanRedo() const;
 
  private:
-  std::stack<std::unique_ptr<ICommand>> undo_stack_;
-  std::stack<std::unique_ptr<ICommand>> redo_stack_;
+  static constexpr size_t MAX_HISTORY = 100;
+
+  std::deque<std::unique_ptr<ICommand>> undo_stack_;
+  std::deque<std::unique_ptr<ICommand>> redo_stack_;
 };
 
 }  // namespace app::commands

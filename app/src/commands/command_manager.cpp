@@ -8,11 +8,13 @@ void CommandManager::Invoke(std::unique_ptr<ICommand> command) {
   }
 
   command->Execute();
-  undo_stack_.push(std::move(command));
 
-  while (!redo_stack_.empty()) {
-    redo_stack_.pop();
+  undo_stack_.push_back(std::move(command));
+  if (undo_stack_.size() > MAX_HISTORY) {
+    undo_stack_.pop_front();
   }
+
+  redo_stack_.clear();
 }
 
 void CommandManager::Undo() {
@@ -20,11 +22,11 @@ void CommandManager::Undo() {
     return;
   }
 
-  auto command = std::move(undo_stack_.top());
-  undo_stack_.pop();
+  auto command = std::move(undo_stack_.back());
+  undo_stack_.pop_back();
 
   command->Undo();
-  redo_stack_.push(std::move(command));
+  redo_stack_.push_back(std::move(command));
 }
 
 void CommandManager::Redo() {
@@ -32,11 +34,11 @@ void CommandManager::Redo() {
     return;
   }
 
-  auto command = std::move(redo_stack_.top());
-  redo_stack_.pop();
+  auto command = std::move(redo_stack_.back());
+  redo_stack_.pop_back();
 
   command->Execute();
-  undo_stack_.push(std::move(command));
+  undo_stack_.push_back(std::move(command));
 }
 
 bool CommandManager::CanUndo() const { return !undo_stack_.empty(); }
