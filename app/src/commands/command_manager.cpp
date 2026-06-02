@@ -27,12 +27,14 @@ void CommandManager::Undo() {
 
   try {
     command->Undo();
-    redo_stack_.push_back(std::move(command));
-    if (redo_stack_.size() > MAX_HISTORY) {
-      redo_stack_.pop_front();
-    }
   } catch (...) {
+    undo_stack_.push_back(std::move(command));
     throw;
+  }
+
+  redo_stack_.push_back(std::move(command));
+  if (redo_stack_.size() > MAX_HISTORY) {
+    redo_stack_.pop_front();
   }
 }
 
@@ -46,12 +48,14 @@ void CommandManager::Redo() {
 
   try {
     command->Execute();
-    undo_stack_.push_back(std::move(command));
-    if (undo_stack_.size() > MAX_HISTORY) {
-      undo_stack_.pop_front();
-    }
   } catch (...) {
+    redo_stack_.push_back(std::move(command));
     throw;
+  }
+
+  undo_stack_.push_back(std::move(command));
+  if (undo_stack_.size() > MAX_HISTORY) {
+    undo_stack_.pop_front();
   }
 }
 
