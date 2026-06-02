@@ -7,7 +7,10 @@ namespace app::commands {
 EditEntityCommand::EditEntityCommand(
     core::logic::Registry<core::entities::Entity>& registry, const core::ID& id,
     EditAction action)
-    : registry_(registry), id_(id), action_(std::move(action)) {}
+    : registry_(registry),
+      id_(id),
+      action_(std::move(action)),
+      memento_meta_(core::ID("temp"), core::Title("temp"), {}) {}
 
 void EditEntityCommand::Execute() {
   auto* entity = registry_.Get(id_);
@@ -16,17 +19,20 @@ void EditEntityCommand::Execute() {
         "EditEntityCommand: Entity not found for editing");
   }
 
-  memento_ = entity->Clone();
+  memento_meta_ = entity->GetMetadata();
+  memento_content_ = entity->GetContent();
   action_(*entity);
 }
 
 void EditEntityCommand::Undo() {
-  if (!memento_) {
+  auto* entity = registry_.Get(id_);
+  if (!entity) {
     return;
   }
 
-  registry_.Remove(id_);
-  registry_.Add(std::move(memento_));
+  entity->SetTitle(memento_meta_.title);
+  entity->SetTags(memento_meta_.tags);
+  entity->SetContent(memento_content_);
 }
 
 }  // namespace app::commands

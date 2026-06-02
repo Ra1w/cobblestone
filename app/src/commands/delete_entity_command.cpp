@@ -9,7 +9,7 @@ DeleteEntityCommand::DeleteEntityCommand(
 void DeleteEntityCommand::Execute() {
   parent_id_ = std::nullopt;
 
-  auto* target = registry_.FindDeep(id_);
+  auto* target = registry_.Get(id_);
   if (target != nullptr) {
     if (target->GetParent() != nullptr) {
       parent_id_ = target->GetParent()->GetId();
@@ -25,7 +25,7 @@ void DeleteEntityCommand::Undo() {
   }
 
   if (parent_id_.has_value()) {
-    auto* parent = registry_.FindDeep(*parent_id_);
+    auto* parent = registry_.Get(*parent_id_);
     if (parent != nullptr) {
       parent->AddChild(std::move(entity_));
       return;

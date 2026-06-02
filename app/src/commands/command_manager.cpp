@@ -25,8 +25,15 @@ void CommandManager::Undo() {
   auto command = std::move(undo_stack_.back());
   undo_stack_.pop_back();
 
-  command->Undo();
-  redo_stack_.push_back(std::move(command));
+  try {
+    command->Undo();
+    redo_stack_.push_back(std::move(command));
+    if (redo_stack_.size() > MAX_HISTORY) {
+      redo_stack_.pop_front();
+    }
+  } catch (...) {
+    throw;
+  }
 }
 
 void CommandManager::Redo() {
@@ -37,8 +44,15 @@ void CommandManager::Redo() {
   auto command = std::move(redo_stack_.back());
   redo_stack_.pop_back();
 
-  command->Execute();
-  undo_stack_.push_back(std::move(command));
+  try {
+    command->Execute();
+    undo_stack_.push_back(std::move(command));
+    if (undo_stack_.size() > MAX_HISTORY) {
+      undo_stack_.pop_front();
+    }
+  } catch (...) {
+    throw;
+  }
 }
 
 bool CommandManager::CanUndo() const { return !undo_stack_.empty(); }

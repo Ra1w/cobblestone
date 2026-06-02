@@ -21,7 +21,8 @@ class EditEntityCommand : public ICommand {
   core::ID id_;
   EditAction action_;
 
-  std::unique_ptr<core::entities::Entity> memento_;
+  core::entities::Metadata memento_meta_;
+  std::string memento_content_;
 };
 
 }  // namespace app::commands

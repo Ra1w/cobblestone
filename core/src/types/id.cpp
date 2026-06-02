@@ -48,3 +48,11 @@ ID ID::Generate() {
 }
 
 }  // namespace core
+
+namespace std {
+
+size_t hash<core::ID>::operator()(const core::ID& id) const {
+  return std::hash<std::string>{}(id.Str());
+}
+
+}  // namespace std
