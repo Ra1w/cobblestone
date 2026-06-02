@@ -155,6 +155,37 @@ std::vector<core::entities::Entity*> LifeEngine::GetRootEntities() const {
       [](const core::entities::Entity& e) { return e.GetParent() == nullptr; });
 }
 
+std::vector<core::entities::Entity*> LifeEngine::FindByTag(
+    const core::Tag& tag) const {
+  return registry_.FindIf([&tag](const core::entities::Entity& e) {
+    const auto& tags = e.GetMetadata().tags;
+    return std::find(tags.begin(), tags.end(), tag) != tags.end();
+  });
+}
+
+std::vector<core::entities::Task*> LifeEngine::GetTasks(
+    std::optional<core::TaskStatus> status) const {
+  auto entities = registry_.FindIf([status](const core::entities::Entity& e) {
+    if (e.GetType() != core::EntityType::Task) {
+      return false;
+    }
+    
+    if (status.has_value()) {
+      return static_cast<const core::entities::Task&>(e).GetStatus() == *status;
+    }
+    
+    return true;
+  });
+
+  std::vector<core::entities::Task*> tasks;
+  tasks.reserve(entities.size());
+  for (auto* e : entities) {
+    tasks.push_back(static_cast<core::entities::Task*>(e));
+  }
+  
+  return tasks;
+}
+
 core::ID LifeEngine::ResolveId(const std::string& prefix) const {
   return registry_.ResolveId(prefix);
 }

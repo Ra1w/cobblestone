@@ -26,6 +26,7 @@ class ConsoleApp {
   void ShowHelp();
 
   void ListRoot();
+  void ListTasks();
 
   void CreateTask();
   void CreateNote();
@@ -39,10 +40,12 @@ class ConsoleApp {
   void ViewEntity();
 
   void EditContent();
-
   void RenameEntity();
-
   void SetStatus();
+  
+  void AddTag();
+  void RemoveTag();
+  void FindByTag();
 
   void PrintTree(const core::entities::Entity& entity, int depth);
 
