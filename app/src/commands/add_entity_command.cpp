@@ -7,7 +7,8 @@ namespace app::commands {
 AddEntityCommand::AddEntityCommand(
     core::logic::Registry<core::entities::Entity>& registry,
     std::unique_ptr<core::entities::Entity> entity)
-    : registry_(registry), id_(entity ? entity->GetId() : core::ID("")) {
+    : registry_(registry),
+      id_(entity ? entity->GetId() : core::ID::Generate()) {
   if (!entity) {
     throw core::LogicError(
         "AddEntityCommand: Received null entity in constructor");
