@@ -60,17 +60,13 @@ void LifeEngine::SaveAll() {
     return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
   });
 
-  auto roots = GetRootEntities();
-  for (auto* root : roots) {
-    SaveRecursive(*root);
-  }
-}
+  auto all_entities = registry_.FindIf([](const auto&) { return true; });
 
-void LifeEngine::SaveRecursive(const core::entities::Entity& entity) {
-  pending_saves_.push_back(storage_->SaveAsync(entity));
-
-  for (const auto& child : entity.GetChildren()) {
-    SaveRecursive(*child);
+  for (auto* entity : all_entities) {
+    if (pending_saves_.size() > 50) {
+      WaitAllSaves();
+    }
+    pending_saves_.push_back(storage_->SaveAsync(*entity));
   }
 }
 
@@ -130,7 +126,7 @@ bool LifeEngine::CanUndo() const { return command_manager_.CanUndo(); }
 bool LifeEngine::CanRedo() const { return command_manager_.CanRedo(); }
 
 core::entities::Entity* LifeEngine::GetEntity(const core::ID& id) const {
-  return registry_.FindDeep(id);
+  return registry_.Get(id);
 }
 
 std::vector<core::entities::Entity*> LifeEngine::GetRootEntities() const {
