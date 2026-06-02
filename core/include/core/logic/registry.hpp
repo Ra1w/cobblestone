@@ -80,7 +80,7 @@ class Registry {
     if (root_it == roots_.end()) {
       throw LogicError(
           "Registry::Remove: Internal inconsistency (entity in index but not "
-          "in roots/parents)");
+          "in roots)");
     }
 
     std::unique_ptr<T> removed = std::move(root_it->second);
