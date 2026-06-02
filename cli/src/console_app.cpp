@@ -48,6 +48,8 @@ void ConsoleApp::ProcessInput(const std::string& input) {
       ShowHelp();
     } else if (input == "ls") {
       ListRoot();
+    } else if (input == "tasks") {
+      ListTasks();
     } else if (input == "view") {
       ViewEntity();
     } else if (input == "add-t") {
@@ -64,6 +66,12 @@ void ConsoleApp::ProcessInput(const std::string& input) {
       RenameEntity();
     } else if (input == "status") {
       SetStatus();
+    } else if (input == "tag-add") {
+      AddTag();
+    } else if (input == "tag-rm") {
+      RemoveTag();
+    } else if (input == "find-tag") {
+      FindByTag();
     } else if (input == "undo") {
       Undo();
     } else if (input == "redo") {
@@ -94,16 +102,20 @@ void ConsoleApp::ProcessInput(const std::string& input) {
 void ConsoleApp::ShowHelp() {
   std::cout << "Navigation & View:\n"
             << "  ls       - Show hierarchy tree\n"
+            << "  tasks    - List all tasks (can filter by status)\n"
             << "  view     - Full view of an entity (ID required)\n"
             << "Creation & Modification:\n"
             << "  add-t    - Create new Task\n"
             << "  add-n    - Create new Note\n"
             << "  edit     - Edit entity content\n"
             << "  rename   - Change entity title\n"
-            << "  status   - Change Task status (Todo/InProgress/Done)\n"
+            << "  status   - Change Task status (todo/inprogress/done)\n"
+            << "  tag-add  - Add tag to entity\n"
+            << "  tag-rm   - Remove tag from entity\n"
             << "  mv       - Move entity to another parent\n"
             << "  rm       - Delete entity\n"
-            << "History & System:\n"
+            << "Search & System:\n"
+            << "  find-tag - Search entities by tag\n"
             << "  undo     - Rollback last action\n"
             << "  redo     - Repeat last undone action\n"
             << "  save     - Force save to disk\n"
@@ -125,15 +137,21 @@ void ConsoleApp::ListRoot() {
 
 void ConsoleApp::PrintTree(const core::entities::Entity& entity, int depth) {
   std::string indent(depth * 3, ' ');
-  std::string type_label =
-      (entity.GetType() == core::EntityType::Task) ? "[T]" : "[N]";
+  std::string type_label = "[N]";
+  if (entity.GetType() == core::EntityType::Task) {
+    type_label = "[T]";
+  }
 
   std::string status_info = "";
   if (entity.GetType() == core::EntityType::Task) {
     auto status = static_cast<const core::entities::Task&>(entity).GetStatus();
-    status_info = (status == core::TaskStatus::Done)         ? " (DONE)"
-                  : (status == core::TaskStatus::InProgress) ? " (...)"
-                                                             : " (TODO)";
+    if (status == core::TaskStatus::Done) {
+      status_info = " (DONE)";
+    } else if (status == core::TaskStatus::InProgress) {
+      status_info = " (...)";
+    } else {
+      status_info = " (TODO)";
+    }
   }
 
   std::cout << std::format("{}|-- {} {}{} (ID: {})\n", indent, type_label,
@@ -162,18 +180,32 @@ void ConsoleApp::ViewEntity() {
   std::cout << "\n==================================================\n";
   std::cout << std::format("TITLE:   {}\n", meta.title.Str());
   std::cout << std::format("ID:      {}\n", meta.id.Str());
-  std::cout << std::format(
-      "TYPE:    {}\n",
-      (entity->GetType() == core::EntityType::Task ? "Task" : "Note"));
+
+  std::string type_str = "Note";
+  if (entity->GetType() == core::EntityType::Task) {
+    type_str = "Task";
+  }
+  std::cout << std::format("TYPE:    {}\n", type_str);
 
   if (entity->GetType() == core::EntityType::Task) {
     auto status = static_cast<core::entities::Task*>(entity)->GetStatus();
-    std::string s_str = (status == core::TaskStatus::Done) ? "Done"
-                        : (status == core::TaskStatus::InProgress)
-                            ? "In Progress"
-                            : "Todo";
+    std::string s_str = "Todo";
+    if (status == core::TaskStatus::Done) {
+      s_str = "Done";
+    } else if (status == core::TaskStatus::InProgress) {
+      s_str = "In Progress";
+    }
     std::cout << std::format("STATUS:  {}\n", s_str);
   }
+
+  std::string tags_str;
+  for (const auto& t : meta.tags) {
+    tags_str += "[" + t.Str() + "] ";
+  }
+  if (tags_str.empty()) {
+    tags_str = "None";
+  }
+  std::cout << std::format("TAGS:    {}\n", tags_str);
 
   std::cout << std::format("CREATED: {}\n", meta.created_at.ToIsoString());
   std::cout << std::format("UPDATED: {}\n", meta.updated_at.ToIsoString());
@@ -322,6 +354,108 @@ core::TaskStatus ConsoleApp::ParseStatus(const std::string& status_str) {
 
   throw core::ValidationError(
       "TaskStatus", "Unknown status. Use 'todo', 'inprogress', or 'done'.");
+}
+
+void ConsoleApp::AddTag() {
+  std::string input;
+  std::string tag_str;
+  std::cout << "Enter Entity ID: ";
+  std::getline(std::cin, input);
+  std::cout << "Enter Tag: ";
+  std::getline(std::cin, tag_str);
+
+  core::ID id = engine_.ResolveId(input);
+  core::Tag new_tag(tag_str);
+
+  engine_.EditEntity(id, [new_tag](core::entities::Entity& e) {
+    auto tags = e.GetMetadata().tags;
+    if (std::find(tags.begin(), tags.end(), new_tag) == tags.end()) {
+      tags.push_back(new_tag);
+      e.SetTags(tags);
+    }
+  });
+  std::cout << "Tag added.\n";
+}
+
+void ConsoleApp::RemoveTag() {
+  std::string input;
+  std::string tag_str;
+  std::cout << "Enter Entity ID: ";
+  std::getline(std::cin, input);
+  std::cout << "Enter Tag: ";
+  std::getline(std::cin, tag_str);
+
+  core::ID id = engine_.ResolveId(input);
+  core::Tag target_tag(tag_str);
+
+  engine_.EditEntity(id, [target_tag](core::entities::Entity& e) {
+    auto tags = e.GetMetadata().tags;
+    auto it = std::remove(tags.begin(), tags.end(), target_tag);
+    if (it != tags.end()) {
+      tags.erase(it, tags.end());
+      e.SetTags(tags);
+    }
+  });
+  std::cout << "Tag removed (if it existed).\n";
+}
+
+void ConsoleApp::FindByTag() {
+  std::string tag_str;
+  std::cout << "Enter Tag to search: ";
+  std::getline(std::cin, tag_str);
+
+  core::Tag search_tag(tag_str);
+  auto results = engine_.FindByTag(search_tag);
+
+  if (results.empty()) {
+    std::cout << "No entities found with tag [" << tag_str << "].\n";
+    return;
+  }
+
+  std::cout << "\nSearch Results:\n";
+  for (const auto* e : results) {
+    std::string type_label = "[N]";
+    if (e->GetType() == core::EntityType::Task) {
+      type_label = "[T]";
+    }
+    std::cout << std::format("{} {} (ID: {})\n", type_label,
+                             e->GetMetadata().title.Str(), e->GetId().Str());
+  }
+}
+
+void ConsoleApp::ListTasks() {
+  std::string status_input;
+  std::cout
+      << "Enter status filter (todo/inprogress/done) or leave empty for all: ";
+  std::getline(std::cin, status_input);
+
+  std::optional<core::TaskStatus> filter;
+  if (!status_input.empty()) {
+    filter = ParseStatus(status_input);
+  }
+
+  auto tasks = engine_.GetTasks(filter);
+  if (tasks.empty()) {
+    std::cout << "No tasks found matching criteria.\n";
+    return;
+  }
+
+  std::cout << "\nTasks List:\n";
+  for (const auto* t : tasks) {
+    std::string status_info;
+    auto status = t->GetStatus();
+
+    if (status == core::TaskStatus::Done) {
+      status_info = "[DONE]";
+    } else if (status == core::TaskStatus::InProgress) {
+      status_info = "[...] ";
+    } else {
+      status_info = "[TODO]";
+    }
+
+    std::cout << std::format("{} {} (ID: {})\n", status_info,
+                             t->GetMetadata().title.Str(), t->GetId().Str());
+  }
 }
 
 }  // namespace cli

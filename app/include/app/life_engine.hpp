@@ -9,6 +9,7 @@
 #include "app/commands/command_manager.hpp"
 #include "app/commands/edit_action.hpp"
 #include "core/entities/entity.hpp"
+#include "core/entities/task.hpp"
 #include "core/interfaces/storage.hpp"
 #include "core/logic/registry.hpp"
 #include "core/types/id.hpp"
@@ -45,6 +46,11 @@ class LifeEngine {
   core::entities::Entity* GetEntity(const core::ID& id) const;
 
   std::vector<core::entities::Entity*> GetRootEntities() const;
+
+  std::vector<core::entities::Entity*> FindByTag(const core::Tag& tag) const;
+
+  std::vector<core::entities::Task*> GetTasks(
+      std::optional<core::TaskStatus> status = std::nullopt) const;
 
   core::ID ResolveId(const std::string& prefix) const;
 
