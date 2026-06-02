@@ -46,6 +46,9 @@ class Entity {
   void SetTitle(Title title);
   void SetTags(TagList tags);
 
+  void RestoreState(Title title, TagList tags, std::string content,
+                    Timestamp updated);
+
   void AddChild(std::unique_ptr<Entity> child);
   std::unique_ptr<Entity> RemoveChild(const ID& id);
 
