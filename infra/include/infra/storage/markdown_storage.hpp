@@ -18,6 +18,7 @@ namespace infra::storage {
 class MarkdownStorage : public core::interfaces::IStorage {
  public:
   explicit MarkdownStorage(std::filesystem::path base_path);
+  virtual ~MarkdownStorage() override;
 
   MarkdownStorage(const MarkdownStorage&) = delete;
   MarkdownStorage& operator=(const MarkdownStorage&) = delete;
