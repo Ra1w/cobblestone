@@ -22,11 +22,6 @@ class ValidationError : public CoreException {
   std::string field_;
 };
 
-class LogicError : public CoreException {
- public:
-  using CoreException::CoreException;
-};
-
 class NotFoundError : public CoreException {
  public:
   using CoreException::CoreException;
@@ -37,9 +32,19 @@ class CommandError : public CoreException {
   using CoreException::CoreException;
 };
 
+class PersistenceError : public CoreException {
+ public:
+  using CoreException::CoreException;
+};
+
 class SystemError : public CoreException {
  public:
   using CoreException::CoreException;
+};
+
+class LogicError : public std::logic_error {
+ public:
+  using std::logic_error::logic_error;
 };
 
 }  // namespace core
