@@ -28,9 +28,9 @@ void ID::Validate(const std::string& value) {
 }
 
 ID ID::Generate() {
-  static std::random_device rd;
-  static std::mt19937 gen(rd());
-  static std::uniform_int_distribution<> dis(0, 15);
+  thread_local std::random_device rd;
+  thread_local std::mt19937 gen(rd());
+  thread_local std::uniform_int_distribution<> dis(0, 15);
   static std::atomic<uint64_t> counter{0};
 
   std::stringstream ss;
