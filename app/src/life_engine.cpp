@@ -41,12 +41,8 @@ void LifeEngine::Load() {
 
   for (const auto& link : pending_links) {
     try {
-      auto* parent = registry_.Get(link.parent_id);
-      if (parent != nullptr) {
-        auto child = registry_.Remove(link.child_id);
-        parent->AddChild(std::move(child));
-      }
-    } catch (const core::CoreException&) {
+      registry_.MoveEntity(link.child_id, link.parent_id);
+    } catch (const core::CoreException& e) {
     }
   }
 }

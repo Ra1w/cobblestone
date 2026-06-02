@@ -16,63 +16,17 @@ MoveEntityCommand::MoveEntityCommand(
                               "] not found");
   }
 
-  if (new_parent_id.has_value()) {
-    if (*new_parent_id == entity_id_) {
-      throw core::CommandError("MoveCommand: Cannot move entity into itself");
-    }
-
-    auto* parent = registry_.Get(*new_parent_id);
-    if (parent == nullptr) {
-      throw core::NotFoundError("MoveCommand: Target parent [" +
-                                new_parent_id->Str() + "] not found");
-    }
-  }
-
-  auto* current_parent = entity->GetParent();
-  if (current_parent != nullptr) {
-    old_parent_id_ = current_parent->GetId();
+  if (auto* parent = entity->GetParent()) {
+    old_parent_id_ = parent->GetId();
   }
 }
 
 void MoveEntityCommand::Execute() {
-  auto entity = Detach(entity_id_);
-  if (!entity) {
-    throw core::LogicError("MoveCommand: Entity vanished during execution");
-  }
-
-  try {
-    Attach(std::move(entity), new_parent_id_);
-  } catch (const core::CoreException& e) {
-    throw;
-  }
+  registry_.MoveEntity(entity_id_, new_parent_id_);
 }
 
 void MoveEntityCommand::Undo() {
-  auto entity = Detach(entity_id_);
-  if (!entity) {
-    throw core::LogicError(
-        "MoveCommand: Critical failure during Undo (entity missing)");
-  }
-  Attach(std::move(entity), old_parent_id_);
-}
-
-std::unique_ptr<core::entities::Entity> MoveEntityCommand::Detach(
-    const core::ID& id) {
-  return registry_.Remove(id);
-}
-
-void MoveEntityCommand::Attach(std::unique_ptr<core::entities::Entity> entity,
-                               std::optional<core::ID> parent_id) {
-  if (parent_id.has_value()) {
-    auto* parent = registry_.Get(*parent_id);
-    if (parent == nullptr) {
-      registry_.Add(std::move(entity));
-      return;
-    }
-    parent->AddChild(std::move(entity));
-  } else {
-    registry_.Add(std::move(entity));
-  }
+  registry_.MoveEntity(entity_id_, old_parent_id_);
 }
 
 }  // namespace app::commands
