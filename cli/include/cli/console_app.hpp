@@ -40,12 +40,15 @@ class ConsoleApp {
   void ViewEntity();
 
   void EditContent();
+  void AppendContent();
   void RenameEntity();
   void SetStatus();
-  
+
   void AddTag();
   void RemoveTag();
   void FindByTag();
+
+  void SearchText();
 
   void PrintTree(const core::entities::Entity& entity, int depth);
 

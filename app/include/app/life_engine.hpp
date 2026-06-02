@@ -52,6 +52,8 @@ class LifeEngine {
   std::vector<core::entities::Task*> GetTasks(
       std::optional<core::TaskStatus> status = std::nullopt) const;
 
+  std::vector<core::entities::Entity*> Search(const std::string& query) const;
+
   core::ID ResolveId(const std::string& prefix) const;
 
  private:
@@ -60,6 +62,8 @@ class LifeEngine {
   std::unique_ptr<core::interfaces::IStorage> storage_;
 
   std::vector<std::future<void>> pending_saves_;
+
+  static void SortByUpdateDate(std::vector<core::entities::Entity*>& list);
 };
 
 }  // namespace app

@@ -141,13 +141,13 @@ void LifeEngine::EditEntity(const core::ID& id, commands::EditAction action) {
       registry_, id, std::move(action)));
 }
 
-void LifeEngine::Undo() { 
-  command_manager_.Undo(); 
+void LifeEngine::Undo() {
+  command_manager_.Undo();
   SaveAll();
 }
 
-void LifeEngine::Redo() { 
-  command_manager_.Redo(); 
+void LifeEngine::Redo() {
+  command_manager_.Redo();
   SaveAll();
 }
 
@@ -159,17 +159,27 @@ core::entities::Entity* LifeEngine::GetEntity(const core::ID& id) const {
   return registry_.Get(id);
 }
 
+void LifeEngine::SortByUpdateDate(std::vector<core::entities::Entity*>& list) {
+  std::sort(list.begin(), list.end(), [](const auto* a, const auto* b) {
+    return a->GetMetadata().updated_at > b->GetMetadata().updated_at;
+  });
+}
+
 std::vector<core::entities::Entity*> LifeEngine::GetRootEntities() const {
-  return registry_.FindIf(
+  auto roots = registry_.FindIf(
       [](const core::entities::Entity& e) { return e.GetParent() == nullptr; });
+  SortByUpdateDate(roots);
+  return roots;
 }
 
 std::vector<core::entities::Entity*> LifeEngine::FindByTag(
     const core::Tag& tag) const {
-  return registry_.FindIf([&tag](const core::entities::Entity& e) {
+  auto results = registry_.FindIf([&tag](const core::entities::Entity& e) {
     const auto& tags = e.GetMetadata().tags;
     return std::find(tags.begin(), tags.end(), tag) != tags.end();
   });
+  SortByUpdateDate(results);
+  return results;
 }
 
 std::vector<core::entities::Task*> LifeEngine::GetTasks(
@@ -178,21 +188,51 @@ std::vector<core::entities::Task*> LifeEngine::GetTasks(
     if (e.GetType() != core::EntityType::Task) {
       return false;
     }
-    
+
     if (status.has_value()) {
       return static_cast<const core::entities::Task&>(e).GetStatus() == *status;
     }
-    
+
     return true;
   });
+
+  SortByUpdateDate(entities);
 
   std::vector<core::entities::Task*> tasks;
   tasks.reserve(entities.size());
   for (auto* e : entities) {
     tasks.push_back(static_cast<core::entities::Task*>(e));
   }
-  
+
   return tasks;
+}
+
+std::vector<core::entities::Entity*> LifeEngine::Search(
+    const std::string& query) const {
+  std::string lower_query = query;
+  std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(),
+                 ::tolower);
+
+  auto results =
+      registry_.FindIf([&lower_query](const core::entities::Entity& e) {
+        std::string title = e.GetMetadata().title.Str();
+        std::transform(title.begin(), title.end(), title.begin(), ::tolower);
+        if (title.find(lower_query) != std::string::npos) {
+          return true;
+        }
+
+        std::string content = e.GetContent();
+        std::transform(content.begin(), content.end(), content.begin(),
+                       ::tolower);
+        if (content.find(lower_query) != std::string::npos) {
+          return true;
+        }
+
+        return false;
+      });
+
+  SortByUpdateDate(results);
+  return results;
 }
 
 core::ID LifeEngine::ResolveId(const std::string& prefix) const {
