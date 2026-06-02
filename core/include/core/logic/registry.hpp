@@ -97,8 +97,24 @@ class Registry {
     }
 
     T* target = it->second;
-    std::unique_ptr<T> owned_target;
 
+    if (new_parent_id.has_value()) {
+      auto parent_it = all_entities_.find(*new_parent_id);
+      if (parent_it == all_entities_.end()) {
+        throw NotFoundError("Registry::Move: Target parent not found");
+      }
+
+      T* new_parent = parent_it->second;
+      core::entities::Entity* current = new_parent;
+      while (current != nullptr) {
+        if (current->GetId() == entity_id) {
+          throw CommandError("Registry::Move: Circular dependency detected");
+        }
+        current = current->GetParent();
+      }
+    }
+
+    std::unique_ptr<T> owned_target;
     if (auto* old_parent = target->GetParent()) {
       owned_target = std::unique_ptr<T>(
           static_cast<T*>(old_parent->RemoveChild(entity_id).release()));
@@ -109,12 +125,8 @@ class Registry {
     }
 
     if (new_parent_id.has_value()) {
-      auto parent_it = all_entities_.find(*new_parent_id);
-      if (parent_it == all_entities_.end()) {
-        roots_[entity_id] = std::move(owned_target);
-      } else {
-        parent_it->second->AddChild(std::move(owned_target));
-      }
+      T* new_parent = all_entities_[*new_parent_id];
+      new_parent->AddChild(std::move(owned_target));
     } else {
       roots_[entity_id] = std::move(owned_target);
     }
@@ -123,13 +135,11 @@ class Registry {
   ID ResolveId(const std::string& prefix) const {
     std::shared_lock lock(mutex_);
 
-    ID full_id(prefix);
-    if (all_entities_.contains(full_id)) {
-      return full_id;
-    }
-
     std::vector<ID> matches;
     for (const auto& [id, ptr] : all_entities_) {
+      if (id.Str() == prefix) {
+        return id;
+      }
       if (id.Str().starts_with(prefix)) {
         matches.push_back(id);
       }

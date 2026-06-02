@@ -54,8 +54,6 @@ class LifeEngine {
   std::unique_ptr<core::interfaces::IStorage> storage_;
 
   std::vector<std::future<void>> pending_saves_;
-
-  void SaveRecursive(const core::entities::Entity& entity);
 };
 
 }  // namespace app
