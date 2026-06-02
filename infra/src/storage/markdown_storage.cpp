@@ -1,6 +1,7 @@
 #include "infra/storage/markdown_storage.hpp"
 
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 #include "core/exceptions.hpp"
@@ -92,7 +93,9 @@ std::vector<core::interfaces::PersistenceEntry> MarkdownStorage::LoadAll() {
           entries.push_back(
               infra::serialization::MarkdownSerializer::Deserialize(
                   buffer.str()));
-        } catch (...) {
+        } catch (const core::CoreException& e) {
+          std::cerr << "[Critical] Failed to load " << entry.path() << ": "
+                    << e.what() << "\n";
         }
       }
     }
@@ -101,7 +104,10 @@ std::vector<core::interfaces::PersistenceEntry> MarkdownStorage::LoadAll() {
 }
 
 void MarkdownStorage::Remove(const core::ID& id) {
-  std::filesystem::remove(GetPath(id));
+  std::filesystem::path p = GetPath(id);
+  if (std::filesystem::exists(p)) {
+    std::filesystem::remove(p);
+  }
 }
 
 std::filesystem::path MarkdownStorage::GetPath(const core::ID& id) const {
