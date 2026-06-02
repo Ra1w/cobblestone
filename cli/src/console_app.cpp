@@ -74,10 +74,19 @@ void ConsoleApp::ProcessInput(const std::string& input) {
     } else {
       std::cout << "Unknown command. Type 'help' for a list of commands.\n";
     }
+  } catch (const core::ValidationError& e) {
+    std::cout << std::format("Input Validation Error: {}\n", e.what());
+  } catch (const core::NotFoundError& e) {
+    std::cout << std::format("Not Found: {}\n", e.what());
+  } catch (const core::PersistenceError& e) {
+    std::cout << std::format("Data Storage Error: {}\n", e.what());
   } catch (const core::CoreException& e) {
     std::cout << std::format("Error: {}\n", e.what());
+  } catch (const std::logic_error& e) {
+    std::cerr << std::format("CRITICAL SOFTWARE BUG: {}\n", e.what());
+    std::cerr << "The application state may be corrupted. Please report this.\n";
   } catch (const std::exception& e) {
-    std::cout << std::format("Critical System Error: {}\n", e.what());
+    std::cerr << std::format("Unknown System Error: {}\n", e.what());
   }
 }
 
