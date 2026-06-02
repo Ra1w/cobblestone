@@ -88,6 +88,38 @@ class Registry {
     return removed;
   }
 
+  void MoveEntity(const ID& entity_id, std::optional<ID> new_parent_id) {
+    std::unique_lock lock(mutex_);
+
+    auto it = all_entities_.find(entity_id);
+    if (it == all_entities_.end()) {
+      throw NotFoundError("Registry::Move: Entity not found");
+    }
+
+    T* target = it->second;
+    std::unique_ptr<T> owned_target;
+
+    if (auto* old_parent = target->GetParent()) {
+      owned_target = std::unique_ptr<T>(
+          static_cast<T*>(old_parent->RemoveChild(entity_id).release()));
+    } else {
+      auto root_it = roots_.find(entity_id);
+      owned_target = std::move(root_it->second);
+      roots_.erase(root_it);
+    }
+
+    if (new_parent_id.has_value()) {
+      auto parent_it = all_entities_.find(*new_parent_id);
+      if (parent_it == all_entities_.end()) {
+        roots_[entity_id] = std::move(owned_target);
+      } else {
+        parent_it->second->AddChild(std::move(owned_target));
+      }
+    } else {
+      roots_[entity_id] = std::move(owned_target);
+    }
+  }
+
   ID ResolveId(const std::string& prefix) const {
     std::shared_lock lock(mutex_);
 
@@ -146,9 +178,7 @@ class Registry {
 
  private:
   mutable std::shared_mutex mutex_;
-
   std::unordered_map<ID, std::unique_ptr<T>> roots_;
-
   std::unordered_map<ID, T*> all_entities_;
 
   void RegisterRecursive(T* entity) {
