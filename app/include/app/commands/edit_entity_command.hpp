@@ -20,9 +20,7 @@ class EditEntityCommand : public ICommand {
   core::logic::Registry<core::entities::Entity>& registry_;
   core::ID id_;
   EditAction action_;
-
-  core::entities::Metadata memento_meta_;
-  std::string memento_content_;
+  std::unique_ptr<core::entities::Entity> memento_;
 };
 
 }  // namespace app::commands

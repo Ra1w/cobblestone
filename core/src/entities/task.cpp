@@ -20,4 +20,15 @@ std::unique_ptr<Entity> Task::Clone() const {
   return clone;
 }
 
+std::unique_ptr<Entity> Task::CloneWithoutChildren() const {
+  return std::make_unique<Task>(meta_, content_, status_);
+}
+
+void Task::RestoreStateFrom(const Entity& other) {
+  Entity::RestoreStateFrom(other);
+  if (other.GetType() == EntityType::Task) {
+    status_ = static_cast<const Task&>(other).status_;
+  }
+}
+
 }  // namespace core::entities
