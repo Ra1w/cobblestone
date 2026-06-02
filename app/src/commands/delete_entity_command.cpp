@@ -24,15 +24,13 @@ void DeleteEntityCommand::Undo() {
     return;
   }
 
-  if (parent_id_.has_value()) {
-    auto* parent = registry_.Get(*parent_id_);
-    if (parent != nullptr) {
-      parent->AddChild(std::move(entity_));
-      return;
-    }
-  }
-
+  core::ID restored_id = entity_->GetId();
+  
   registry_.Add(std::move(entity_));
+
+  if (parent_id_.has_value()) {
+    registry_.MoveEntity(restored_id, *parent_id_);
+  }
 }
 
 }  // namespace app::commands
