@@ -62,6 +62,8 @@ void ConsoleApp::ProcessInput(const std::string& input) {
       MoveEntity();
     } else if (input == "edit") {
       EditContent();
+    } else if (input == "append") {
+      AppendContent();
     } else if (input == "rename") {
       RenameEntity();
     } else if (input == "status") {
@@ -72,6 +74,8 @@ void ConsoleApp::ProcessInput(const std::string& input) {
       RemoveTag();
     } else if (input == "find-tag") {
       FindByTag();
+    } else if (input == "search") {
+      SearchText();
     } else if (input == "undo") {
       Undo();
     } else if (input == "redo") {
@@ -101,13 +105,14 @@ void ConsoleApp::ProcessInput(const std::string& input) {
 
 void ConsoleApp::ShowHelp() {
   std::cout << "Navigation & View:\n"
-            << "  ls       - Show hierarchy tree\n"
+            << "  ls       - Show hierarchy tree (sorted by new)\n"
             << "  tasks    - List all tasks (can filter by status)\n"
             << "  view     - Full view of an entity (ID required)\n"
             << "Creation & Modification:\n"
             << "  add-t    - Create new Task\n"
             << "  add-n    - Create new Note\n"
-            << "  edit     - Edit entity content\n"
+            << "  edit     - Overwrite entity content\n"
+            << "  append   - Add text to the end of entity content\n"
             << "  rename   - Change entity title\n"
             << "  status   - Change Task status (todo/inprogress/done)\n"
             << "  tag-add  - Add tag to entity\n"
@@ -115,6 +120,7 @@ void ConsoleApp::ShowHelp() {
             << "  mv       - Move entity to another parent\n"
             << "  rm       - Delete entity\n"
             << "Search & System:\n"
+            << "  search   - Full-text search in title and content\n"
             << "  find-tag - Search entities by tag\n"
             << "  undo     - Rollback last action\n"
             << "  redo     - Repeat last undone action\n"
@@ -455,6 +461,63 @@ void ConsoleApp::ListTasks() {
 
     std::cout << std::format("{} {} (ID: {})\n", status_info,
                              t->GetMetadata().title.Str(), t->GetId().Str());
+  }
+}
+
+void ConsoleApp::AppendContent() {
+  std::string input;
+  std::string append_text;
+  std::cout << "Enter Entity ID: ";
+  std::getline(std::cin, input);
+  std::cout << "Enter Text to Append: ";
+  std::getline(std::cin, append_text);
+
+  core::ID id = engine_.ResolveId(input);
+  engine_.EditEntity(id, [append_text](core::entities::Entity& e) {
+    std::string current = e.GetContent();
+    if (!current.empty() && current.back() != '\n') {
+      current += "\n";
+    }
+    current += append_text;
+    e.SetContent(current);
+  });
+  std::cout << "Content appended.\n";
+}
+
+void ConsoleApp::SearchText() {
+  std::string query;
+  std::cout << "Enter search query: ";
+  std::getline(std::cin, query);
+
+  if (query.empty()) {
+    std::cout << "Query cannot be empty.\n";
+    return;
+  }
+
+  auto results = engine_.Search(query);
+
+  if (results.empty()) {
+    std::cout << "No matches found for [" << query << "].\n";
+    return;
+  }
+
+  std::cout << "\nSearch Results:\n";
+  for (const auto* e : results) {
+    std::string type_label = "[N]";
+    if (e->GetType() == core::EntityType::Task) {
+      type_label = "[T]";
+    }
+
+    std::string snippet = e->GetContent();
+    if (snippet.length() > 50) {
+      snippet = snippet.substr(0, 47) + "...";
+    }
+
+    std::replace(snippet.begin(), snippet.end(), '\n', ' ');
+
+    std::cout << std::format("{} {} (ID: {})\n      Content: {}\n", type_label,
+                             e->GetMetadata().title.Str(), e->GetId().Str(),
+                             snippet);
   }
 }
 
