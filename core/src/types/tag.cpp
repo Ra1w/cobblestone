@@ -10,6 +10,11 @@ Tag::Tag(std::string value) : StringWrapper(std::move(value)) {
     throw ValidationError("Tag", "Value cannot be empty");
   }
 
+  if (value_.find_first_of(",[]\n\r") != std::string::npos) {
+    throw ValidationError("Tag",
+                          "Contains forbidden characters (, [ ] or newlines)");
+  }
+
   std::transform(
       value_.begin(), value_.end(), value_.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));

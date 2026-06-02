@@ -53,7 +53,14 @@ void LifeEngine::SaveAll() {
   }
 
   std::erase_if(pending_saves_, [](std::future<void>& f) {
-    return f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    if (f.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+      try {
+        f.get();
+      } catch (const std::exception&) {
+      }
+      return true;
+    }
+    return false;
   });
 
   auto all_entities = registry_.FindIf([](const auto&) { return true; });

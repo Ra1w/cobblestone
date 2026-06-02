@@ -3,8 +3,16 @@
 namespace core {
 
 Title::Title(std::string value) : StringWrapper(std::move(value)) {
-  value_.erase(0, value_.find_first_not_of(" "));
-  value_.erase(value_.find_last_not_of(" ") + 1);
+  size_t first = value_.find_first_not_of(" ");
+  if (first != std::string::npos) {
+    value_.erase(0, first);
+    size_t last = value_.find_last_not_of(" ");
+    if (last != std::string::npos) {
+      value_.erase(last + 1);
+    }
+  } else {
+    value_.clear();
+  }
   Validate(value_);
 }
 
@@ -20,6 +28,9 @@ void Title::Validate(const std::string& val) {
   }
   if (val.length() > 255) {
     throw ValidationError("Title", "Exceeds 255 characters");
+  }
+  if (val.find_first_of("\n\r") != std::string::npos) {
+    throw ValidationError("Title", "Contains newline characters");
   }
 }
 
