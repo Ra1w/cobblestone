@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -13,9 +15,19 @@
 namespace core::logic {
 
 template <typename T>
+concept Registrable = requires(T t) {
+  { t.GetId() } -> std::convertible_to<const core::ID&>;
+  {
+    t.GetChildren()
+  }
+  -> std::same_as<const std::vector<std::unique_ptr<core::entities::Entity>>&>;
+};
+
+template <Registrable T>
 class Registry {
  public:
   Registry() = default;
+  ~Registry() = default;
 
   Registry(const Registry&) = delete;
   Registry& operator=(const Registry&) = delete;
@@ -28,19 +40,20 @@ class Registry {
     std::unique_lock lock(mutex_);
     const ID& id = item->GetId();
 
-    if (items_.find(id) != items_.end()) {
+    if (all_entities_.contains(id)) {
       throw LogicError("Registry::Add: Entity with ID [" + id.Str() +
                        "] already exists");
     }
 
-    items_[id] = std::move(item);
+    RegisterRecursive(item.get());
+    roots_[id] = std::move(item);
   }
 
   T* Get(const ID& id) const {
     std::shared_lock lock(mutex_);
-    auto it = items_.find(id);
-    if (it != items_.end()) {
-      return it->second.get();
+    auto it = all_entities_.find(id);
+    if (it != all_entities_.end()) {
+      return it->second;
     }
     return nullptr;
   }
@@ -48,50 +61,46 @@ class Registry {
   std::unique_ptr<T> Remove(const ID& id) {
     std::unique_lock lock(mutex_);
 
-    T* target = FindDeepInternal(id);
-    if (!target) {
+    auto it = all_entities_.find(id);
+    if (it == all_entities_.end()) {
       throw NotFoundError("Registry::Remove: Entity [" + id.Str() +
                           "] not found");
     }
 
+    T* target = it->second;
+    UnregisterRecursive(target);
+
     auto* parent = target->GetParent();
     if (parent != nullptr) {
-      return parent->RemoveChild(id);
+      auto removed_base = parent->RemoveChild(id);
+      return std::unique_ptr<T>(static_cast<T*>(removed_base.release()));
     }
 
-    auto it = items_.find(id);
-    if (it == items_.end()) {
-      throw LogicError("Registry::Remove: Internal inconsistency error");
+    auto root_it = roots_.find(id);
+    if (root_it == roots_.end()) {
+      throw LogicError(
+          "Registry::Remove: Internal inconsistency (entity in index but not "
+          "in roots/parents)");
     }
 
-    std::unique_ptr<T> removed = std::move(it->second);
-    items_.erase(it);
+    std::unique_ptr<T> removed = std::move(root_it->second);
+    roots_.erase(root_it);
     return removed;
   }
 
   ID ResolveId(const std::string& prefix) const {
     std::shared_lock lock(mutex_);
 
-    for (const auto& [id, item] : items_) {
-      if (id.Str() == prefix) {
-        return id;
-      }
+    ID full_id(prefix);
+    if (all_entities_.contains(full_id)) {
+      return full_id;
     }
 
     std::vector<ID> matches;
-
-    std::function<void(const core::entities::Entity&)> collect_ids;
-    collect_ids = [&](const core::entities::Entity& e) {
-      if (e.GetId().Str().starts_with(prefix)) {
-        matches.push_back(e.GetId());
+    for (const auto& [id, ptr] : all_entities_) {
+      if (id.Str().starts_with(prefix)) {
+        matches.push_back(id);
       }
-      for (const auto& child : e.GetChildren()) {
-        collect_ids(*child);
-      }
-    };
-
-    for (const auto& [id, item] : items_) {
-      collect_ids(*item);
     }
 
     if (matches.empty()) {
@@ -116,59 +125,50 @@ class Registry {
     std::shared_lock lock(mutex_);
     std::vector<T*> results;
 
-    for (const auto& [id, item] : items_) {
-      if (predicate(*item)) {
-        results.push_back(item.get());
+    for (const auto& [id, ptr] : all_entities_) {
+      if (predicate(*ptr)) {
+        results.push_back(ptr);
       }
     }
     return results;
   }
 
-  T* FindDeep(const ID& id) const {
-    std::shared_lock lock(mutex_);
-    return FindDeepInternal(id);
-  }
-
   size_t Count() const {
     std::shared_lock lock(mutex_);
-    return items_.size();
+    return all_entities_.size();
   }
 
   void Clear() {
     std::unique_lock lock(mutex_);
-    items_.clear();
+    roots_.clear();
+    all_entities_.clear();
   }
 
  private:
   mutable std::shared_mutex mutex_;
-  std::unordered_map<ID, std::unique_ptr<T>> items_;
 
-  T* FindDeepInternal(const ID& id) const {
-    auto it = items_.find(id);
-    if (it != items_.end()) {
-      return it->second.get();
-    }
+  std::unordered_map<ID, std::unique_ptr<T>> roots_;
 
-    for (const auto& [root_id, item] : items_) {
-      T* found = FindRecursive(item.get(), id);
-      if (found) {
-        return found;
-      }
+  std::unordered_map<ID, T*> all_entities_;
+
+  void RegisterRecursive(T* entity) {
+    if (entity == nullptr) {
+      return;
     }
-    return nullptr;
+    all_entities_[entity->GetId()] = entity;
+    for (const auto& child : entity->GetChildren()) {
+      RegisterRecursive(static_cast<T*>(child.get()));
+    }
   }
 
-  T* FindRecursive(T* current, const ID& id) const {
-    if (current->GetId() == id) {
-      return dynamic_cast<T*>(current);
+  void UnregisterRecursive(T* entity) {
+    if (entity == nullptr) {
+      return;
     }
-    for (const auto& child : current->GetChildren()) {
-      T* found = FindRecursive(child.get(), id);
-      if (found) {
-        return found;
-      }
+    for (const auto& child : entity->GetChildren()) {
+      UnregisterRecursive(static_cast<T*>(child.get()));
     }
-    return nullptr;
+    all_entities_.erase(entity->GetId());
   }
 };
 
