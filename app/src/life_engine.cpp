@@ -76,7 +76,10 @@ void LifeEngine::SaveAll() {
 void LifeEngine::WaitAllSaves() {
   for (auto& f : pending_saves_) {
     if (f.valid()) {
-      f.get();
+      try {
+        f.get();
+      } catch (const std::exception&) {
+      }
     }
   }
   pending_saves_.clear();
@@ -138,9 +141,15 @@ void LifeEngine::EditEntity(const core::ID& id, commands::EditAction action) {
       registry_, id, std::move(action)));
 }
 
-void LifeEngine::Undo() { command_manager_.Undo(); }
+void LifeEngine::Undo() { 
+  command_manager_.Undo(); 
+  SaveAll();
+}
 
-void LifeEngine::Redo() { command_manager_.Redo(); }
+void LifeEngine::Redo() { 
+  command_manager_.Redo(); 
+  SaveAll();
+}
 
 bool LifeEngine::CanUndo() const { return command_manager_.CanUndo(); }
 
