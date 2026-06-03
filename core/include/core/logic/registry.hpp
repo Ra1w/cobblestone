@@ -3,12 +3,10 @@
 #include <concepts>
 #include <functional>
 #include <memory>
-#include <mutex>
-#include <shared_mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
-#include "core/entities/entity.hpp"
 #include "core/exceptions.hpp"
 #include "core/types/id.hpp"
 
@@ -17,10 +15,8 @@ namespace core::logic {
 template <typename T>
 concept Registrable = requires(T t) {
   { t.GetId() } -> std::convertible_to<const core::ID&>;
-  {
-    t.GetChildren()
-  }
-  -> std::same_as<const std::vector<std::unique_ptr<core::entities::Entity>>&>;
+  { t.GetChildren() } -> std::same_as<const std::vector<std::unique_ptr<T>>&>;
+  { t.GetParent() } -> std::same_as<T*>;
 };
 
 template <Registrable T>
@@ -37,7 +33,6 @@ class Registry {
       throw LogicError("Registry::Add: Attempt to add null pointer");
     }
 
-    std::unique_lock lock(mutex_);
     const ID& id = item->GetId();
 
     if (all_entities_.contains(id)) {
@@ -50,7 +45,6 @@ class Registry {
   }
 
   T* Get(const ID& id) const {
-    std::shared_lock lock(mutex_);
     auto it = all_entities_.find(id);
     if (it != all_entities_.end()) {
       return it->second;
@@ -59,8 +53,6 @@ class Registry {
   }
 
   std::unique_ptr<T> Remove(const ID& id) {
-    std::unique_lock lock(mutex_);
-
     auto it = all_entities_.find(id);
     if (it == all_entities_.end()) {
       throw NotFoundError("Registry::Remove: Entity [" + id.Str() +
@@ -89,8 +81,6 @@ class Registry {
   }
 
   void MoveEntity(const ID& entity_id, std::optional<ID> new_parent_id) {
-    std::unique_lock lock(mutex_);
-
     auto it = all_entities_.find(entity_id);
     if (it == all_entities_.end()) {
       throw NotFoundError("Registry::Move: Entity not found");
@@ -105,7 +95,7 @@ class Registry {
       }
 
       T* new_parent = parent_it->second;
-      core::entities::Entity* current = new_parent;
+      T* current = new_parent;
       while (current != nullptr) {
         if (current->GetId() == entity_id) {
           throw CommandError("Registry::Move: Circular dependency detected");
@@ -133,8 +123,6 @@ class Registry {
   }
 
   ID ResolveId(const std::string& prefix) const {
-    std::shared_lock lock(mutex_);
-
     std::vector<ID> matches;
     for (const auto& [id, ptr] : all_entities_) {
       if (id.Str() == prefix) {
@@ -164,9 +152,7 @@ class Registry {
 
   template <typename Predicate>
   std::vector<T*> FindIf(Predicate predicate) const {
-    std::shared_lock lock(mutex_);
     std::vector<T*> results;
-
     for (const auto& [id, ptr] : all_entities_) {
       if (predicate(*ptr)) {
         results.push_back(ptr);
@@ -175,19 +161,14 @@ class Registry {
     return results;
   }
 
-  size_t Count() const {
-    std::shared_lock lock(mutex_);
-    return all_entities_.size();
-  }
+  size_t Count() const { return all_entities_.size(); }
 
   void Clear() {
-    std::unique_lock lock(mutex_);
     roots_.clear();
     all_entities_.clear();
   }
 
  private:
-  mutable std::shared_mutex mutex_;
   std::unordered_map<ID, std::unique_ptr<T>> roots_;
   std::unordered_map<ID, T*> all_entities_;
 
