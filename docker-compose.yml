@@ -1,0 +1,11 @@
+services:
+  cobblestone:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: cobblestone
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./my_notes:/app/notes
+    working_dir: /app
