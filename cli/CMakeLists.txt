@@ -1,8 +1,8 @@
-add_executable(gamificator
+add_executable(cobblestone
   main.cpp
   src/console_app.cpp
 )
 
-target_include_directories(gamificator PRIVATE include)
+target_include_directories(cobblestone PRIVATE include)
 
-target_link_libraries(gamificator PRIVATE app infra)
+target_link_libraries(cobblestone PRIVATE app infra)
