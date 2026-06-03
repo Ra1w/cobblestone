@@ -1,6 +1,7 @@
 #include "core/types/timestamp.hpp"
 
 #include <chrono>
+#include <cstdio>
 #include <format>
 #include <sstream>
 
@@ -29,16 +30,26 @@ std::string Timestamp::ToIsoString() const {
 }
 
 Timestamp Timestamp::FromIsoString(const std::string& iso_str) {
-  std::chrono::sys_seconds parsed_tp;
-  std::istringstream in{iso_str};
-  
-  in >> std::chrono::parse("%Y-%m-%dT%H:%M:%SZ", parsed_tp);
+  int year, month, day, hour, minute, second;
 
-  if (in.fail()) {
+  if (std::sscanf(iso_str.c_str(), "%4d-%2d-%2dT%2d:%2d:%2dZ", &year, &month,
+                  &day, &hour, &minute, &second) != 6) {
     throw ValidationError("Timestamp", "Invalid ISO 8601 format");
   }
 
-  return Timestamp(parsed_tp);
+  std::chrono::year_month_day ymd{std::chrono::year(year),
+                                  std::chrono::month(month),
+                                  std::chrono::day(day)};
+
+  if (!ymd.ok() || hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
+      second < 0 || second > 60) {
+    throw ValidationError("Timestamp", "Invalid date or time values");
+  }
+
+  auto tp = std::chrono::sys_days{ymd} + std::chrono::hours{hour} +
+            std::chrono::minutes{minute} + std::chrono::seconds{second};
+
+  return Timestamp(tp);
 }
 
 }  // namespace core
