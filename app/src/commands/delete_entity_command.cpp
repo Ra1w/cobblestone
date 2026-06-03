@@ -3,20 +3,32 @@
 namespace app::commands {
 
 DeleteEntityCommand::DeleteEntityCommand(
-    core::logic::Registry<core::entities::Entity>& registry, const core::ID& id)
-    : registry_(registry), id_(id) {}
+    core::logic::Registry<core::entities::Entity>& registry,
+    core::interfaces::IStorage* storage, const core::ID& id)
+    : registry_(registry), storage_(storage), id_(id) {}
 
 void DeleteEntityCommand::Execute() {
   parent_id_ = std::nullopt;
+  removed_ids_.clear();
 
   auto* target = registry_.Get(id_);
   if (target != nullptr) {
     if (target->GetParent() != nullptr) {
       parent_id_ = target->GetParent()->GetId();
     }
+
+    for (auto* e : target->WalkTree()) {
+      removed_ids_.push_back(e->GetId());
+    }
   }
 
   entity_ = registry_.Remove(id_);
+
+  if (storage_ != nullptr) {
+    for (const auto& r_id : removed_ids_) {
+      storage_->Remove(r_id);
+    }
+  }
 }
 
 void DeleteEntityCommand::Undo() {
@@ -25,7 +37,11 @@ void DeleteEntityCommand::Undo() {
   }
 
   core::ID restored_id = entity_->GetId();
-  
+
+  for (auto* e : entity_->WalkTree()) {
+    e->MarkDirty();
+  }
+
   registry_.Add(std::move(entity_));
 
   if (parent_id_.has_value()) {

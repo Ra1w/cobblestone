@@ -15,7 +15,7 @@ Metadata::Metadata(ID id, Title title, TagList tags)
       updated_at(created_at) {}
 
 Entity::Entity(Metadata meta, std::string content)
-    : meta_(std::move(meta)), content_(std::move(content)) {}
+    : meta_(std::move(meta)), content_(std::move(content)), is_dirty_(true) {}
 
 Entity::Entity(Entity&& other) noexcept
     : meta_(std::move(other.meta_)),
@@ -65,9 +65,13 @@ void Entity::SetTags(TagList tags) {
 void Entity::RestoreStateFrom(const Entity& other) {
   meta_ = other.meta_;
   content_ = other.content_;
+  is_dirty_ = true;
 }
 
-void Entity::UpdateTimestamp() { meta_.updated_at = Timestamp::Now(); }
+void Entity::UpdateTimestamp() {
+  meta_.updated_at = Timestamp::Now();
+  is_dirty_ = true;
+}
 
 void Entity::AddChild(std::unique_ptr<Entity> child) {
   if (!child) {
@@ -82,14 +86,13 @@ void Entity::AddChild(std::unique_ptr<Entity> child) {
   Entity* current_ancestor = this->parent_;
   while (current_ancestor != nullptr) {
     if (current_ancestor->GetId() == child->GetId()) {
-      throw CommandError(
-          "Entity::AddChild: circular dependency detected. The target child is "
-          "already an ancestor of this entity.");
+      throw CommandError("Entity::AddChild: circular dependency detected.");
     }
     current_ancestor = current_ancestor->parent_;
   }
 
   child->parent_ = this;
+  child->MarkDirty();
   children_.push_back(std::move(child));
 
   UpdateTimestamp();
@@ -104,6 +107,7 @@ std::unique_ptr<Entity> Entity::RemoveChild(const ID& id) {
   if (it != children_.end()) {
     std::unique_ptr<Entity> removed = std::move(*it);
     removed->parent_ = nullptr;
+    removed->MarkDirty();
     children_.erase(it);
 
     UpdateTimestamp();
@@ -116,7 +120,9 @@ std::unique_ptr<Entity> Entity::RemoveChild(const ID& id) {
 std::generator<Entity*> Entity::WalkTree() {
   co_yield this;
   for (const auto& child : children_) {
-    co_yield std::ranges::elements_of(child->WalkTree());
+    for (auto* descendant : child->WalkTree()) {
+      co_yield descendant;
+    }
   }
 }
 

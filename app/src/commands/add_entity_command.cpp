@@ -6,8 +6,10 @@ namespace app::commands {
 
 AddEntityCommand::AddEntityCommand(
     core::logic::Registry<core::entities::Entity>& registry,
+    core::interfaces::IStorage* storage,
     std::unique_ptr<core::entities::Entity> entity)
     : registry_(registry),
+      storage_(storage),
       id_(entity ? entity->GetId() : core::ID::Generate()) {
   if (!entity) {
     throw core::LogicError(
@@ -24,6 +26,11 @@ void AddEntityCommand::Execute() {
   registry_.Add(std::move(entity_));
 }
 
-void AddEntityCommand::Undo() { entity_ = registry_.Remove(id_); }
+void AddEntityCommand::Undo() {
+  entity_ = registry_.Remove(id_);
+  if (storage_ != nullptr) {
+    storage_->Remove(id_);
+  }
+}
 
 }  // namespace app::commands

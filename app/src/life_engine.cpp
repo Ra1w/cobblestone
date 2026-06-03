@@ -51,6 +51,10 @@ void LifeEngine::Load() {
           link.child_id.Str(), link.parent_id.Str(), e.what());
     }
   }
+
+  for (auto* e : registry_.FindIf([](const auto&) { return true; })) {
+    e->ClearDirty();
+  }
 }
 
 void LifeEngine::SaveAll() {
@@ -71,10 +75,12 @@ void LifeEngine::SaveAll() {
     return false;
   });
 
-  auto all_entities = registry_.FindIf([](const auto&) { return true; });
+  auto dirty_entities =
+      registry_.FindIf([](const auto& e) { return e.IsDirty(); });
 
-  for (auto* entity : all_entities) {
+  for (auto* entity : dirty_entities) {
     pending_saves_.push_back(storage_->SaveAsync(*entity));
+    entity->ClearDirty();
   }
 }
 
@@ -95,44 +101,21 @@ void LifeEngine::CreateTask(const core::Title& title,
                             const std::string& content) {
   auto task = std::make_unique<core::entities::Task>(
       core::entities::Metadata(core::ID::Generate(), title, {}), content);
-  command_manager_.InvokeMake<commands::AddEntityCommand>(registry_,
-                                                          std::move(task));
+  command_manager_.InvokeMake<commands::AddEntityCommand>(
+      registry_, storage_.get(), std::move(task));
 }
 
 void LifeEngine::CreateNote(const core::Title& title,
                             const std::string& content) {
   auto note = std::make_unique<core::entities::Note>(
       core::entities::Metadata(core::ID::Generate(), title, {}), content);
-
-  command_manager_.InvokeMake<commands::AddEntityCommand>(registry_,
-                                                          std::move(note));
+  command_manager_.InvokeMake<commands::AddEntityCommand>(
+      registry_, storage_.get(), std::move(note));
 }
 
 void LifeEngine::RemoveEntity(const core::ID& id) {
-  std::vector<core::ID> ids_to_remove;
-
-  if (storage_) {
-    auto* target = registry_.Get(id);
-    if (target != nullptr) {
-      std::function<void(const core::entities::Entity*)> gather =
-          [&](const core::entities::Entity* e) {
-            ids_to_remove.push_back(e->GetId());
-            for (const auto& child : e->GetChildren()) {
-              gather(child.get());
-            }
-          };
-      gather(target);
-    }
-  }
-
-  command_manager_.Invoke(
-      std::make_unique<commands::DeleteEntityCommand>(registry_, id));
-
-  if (storage_) {
-    for (const auto& r_id : ids_to_remove) {
-      storage_->Remove(r_id);
-    }
-  }
+  command_manager_.InvokeMake<commands::DeleteEntityCommand>(
+      registry_, storage_.get(), id);
 }
 
 void LifeEngine::MoveEntity(const core::ID& entity_id,

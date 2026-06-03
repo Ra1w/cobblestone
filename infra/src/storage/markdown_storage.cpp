@@ -66,16 +66,25 @@ void MarkdownStorage::WorkerLoop() {
     if (task) {
       try {
         if (task->type == StorageTask::Type::Save) {
-          std::ofstream file(task->path, std::ios::trunc);
+          std::filesystem::path tmp_path = task->path;
+          tmp_path += ".tmp";
+
+          std::ofstream file(tmp_path, std::ios::trunc);
           if (!file.is_open()) {
-            throw core::SystemError("Cannot open file: " + task->path.string());
+            throw core::SystemError("Cannot open file: " + tmp_path.string());
           }
+
           file << task->content;
+          file.flush();
 
           if (!file) {
+            file.close();
             throw core::SystemError("Failed to write data to file: " +
-                                    task->path.string());
+                                    tmp_path.string());
           }
+          file.close();
+
+          std::filesystem::rename(tmp_path, task->path);
         } else if (task->type == StorageTask::Type::Remove) {
           if (std::filesystem::exists(task->path)) {
             std::filesystem::remove(task->path);
@@ -91,8 +100,9 @@ void MarkdownStorage::WorkerLoop() {
 
 std::vector<core::interfaces::PersistenceEntry> MarkdownStorage::LoadAll() {
   std::vector<core::interfaces::PersistenceEntry> entries;
-  
-  if (!std::filesystem::exists(base_path_) || !std::filesystem::is_directory(base_path_)) {
+
+  if (!std::filesystem::exists(base_path_) ||
+      !std::filesystem::is_directory(base_path_)) {
     return entries;
   }
 

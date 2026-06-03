@@ -57,12 +57,18 @@ class Entity {
 
   std::generator<Entity*> WalkTree();
 
+  bool IsDirty() const { return is_dirty_; }
+  void ClearDirty() { is_dirty_ = false; }
+  void MarkDirty() { is_dirty_ = true; UpdateTimestamp(); }
+
  protected:
   Metadata meta_;
   std::string content_;
 
   Entity* parent_ = nullptr;
   std::vector<std::unique_ptr<Entity>> children_;
+
+  bool is_dirty_ = true;
 
   void UpdateTimestamp();
 };
