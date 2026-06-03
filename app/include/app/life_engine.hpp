@@ -29,8 +29,8 @@ class LifeEngine {
   void SaveAll();
   void WaitAllSaves();
 
-  void CreateTask(const core::Title& title, const std::string& content);
-  void CreateNote(const core::Title& title, const std::string& content);
+  core::ID CreateTask(const core::Title& title, const std::string& content);
+  core::ID CreateNote(const core::Title& title, const std::string& content);
 
   void RemoveEntity(const core::ID& id);
 

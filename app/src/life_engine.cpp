@@ -81,11 +81,13 @@ void LifeEngine::SaveAll() {
   }
 
   std::erase_if(pending_saves_, [this](PendingSave& task) {
-    if (task.future.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+    if (task.future.wait_for(std::chrono::seconds(0)) ==
+        std::future_status::ready) {
       try {
         task.future.get();
       } catch (const std::exception& e) {
-        std::println(stderr, "Critical Error during background save for [{}]: {}",
+        std::println(stderr,
+                     "Critical Error during background save for [{}]: {}",
                      task.entity_id.Str(), e.what());
         if (auto* e_ptr = registry_.Get(task.entity_id)) {
           e_ptr->ForceDirty();
@@ -111,7 +113,7 @@ void LifeEngine::WaitAllSaves() {
       try {
         task.future.get();
       } catch (const std::exception& e) {
-        std::println(stderr, "Critical Error waiting for save [{}]: {}", 
+        std::println(stderr, "Critical Error waiting for save [{}]: {}",
                      task.entity_id.Str(), e.what());
         if (auto* e_ptr = registry_.Get(task.entity_id)) {
           e_ptr->ForceDirty();
@@ -122,22 +124,26 @@ void LifeEngine::WaitAllSaves() {
   pending_saves_.clear();
 }
 
-void LifeEngine::CreateTask(const core::Title& title,
-                            const std::string& content) {
+core::ID LifeEngine::CreateTask(const core::Title& title,
+                                const std::string& content) {
   auto task = std::make_unique<core::entities::Task>(
       core::entities::Metadata(core::ID::Generate(), title, {}), content);
+  core::ID id = task->GetId();
   command_manager_.InvokeMake<commands::AddEntityCommand>(
       registry_, storage_.get(), std::move(task));
   SaveAll();
+  return id;
 }
 
-void LifeEngine::CreateNote(const core::Title& title,
-                            const std::string& content) {
+core::ID LifeEngine::CreateNote(const core::Title& title,
+                                const std::string& content) {
   auto note = std::make_unique<core::entities::Note>(
       core::entities::Metadata(core::ID::Generate(), title, {}), content);
+  core::ID id = note->GetId();
   command_manager_.InvokeMake<commands::AddEntityCommand>(
       registry_, storage_.get(), std::move(note));
   SaveAll();
+  return id;
 }
 
 void LifeEngine::RemoveEntity(const core::ID& id) {

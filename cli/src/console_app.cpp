@@ -19,7 +19,7 @@ ConsoleApp::ConsoleApp(app::LifeEngine& engine) : engine_(engine) {}
 void ConsoleApp::Run() {
   try {
     engine_.Load();
-    std::println("Life Gamificator 2026: Workspace loaded successfully.");
+    std::println("Cobblestone 2026: Workspace loaded successfully.");
   } catch (const core::CoreException& e) {
     std::println("Warning during load: {}", e.what());
   }
@@ -249,8 +249,8 @@ void ConsoleApp::CreateTask() {
   std::string content;
   std::getline(std::cin, content);
 
-  engine_.CreateTask(core::Title(title_raw), content);
-  std::println("Task created successfully.");
+  core::ID id = engine_.CreateTask(core::Title(title_raw), content);
+  std::println("Task created successfully with ID: {}", id.Str());
 }
 
 void ConsoleApp::CreateNote() {
@@ -262,8 +262,8 @@ void ConsoleApp::CreateNote() {
   std::string content;
   std::getline(std::cin, content);
 
-  engine_.CreateNote(core::Title(title_raw), content);
-  std::println("Note created successfully.");
+  core::ID id = engine_.CreateNote(core::Title(title_raw), content);
+  std::println("Note created successfully with ID: {}", id.Str());
 }
 
 void ConsoleApp::DeleteEntity() {
