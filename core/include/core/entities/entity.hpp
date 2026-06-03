@@ -30,9 +30,8 @@ class Entity {
 
   Entity(const Entity&) = delete;
   Entity& operator=(const Entity&) = delete;
-
-  Entity(Entity&& other) noexcept;
-  Entity& operator=(Entity&& other) noexcept;
+  Entity(Entity&&) = delete;
+  Entity& operator=(Entity&&) = delete;
 
   const ID& GetId() const { return meta_.id; }
   const Metadata& GetMetadata() const { return meta_; }

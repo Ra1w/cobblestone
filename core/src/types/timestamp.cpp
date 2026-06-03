@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <format>
-#include <iomanip>
 #include <sstream>
 
 namespace core {
@@ -26,23 +25,20 @@ bool Timestamp::operator>(const Timestamp& other) const {
 
 std::string Timestamp::ToIsoString() const {
   return std::format("{:%Y-%m-%dT%H:%M:%SZ}",
-                     std::chrono::floor<std::chrono::seconds>(tp_));
+                     std::chrono::time_point_cast<std::chrono::seconds>(tp_));
 }
 
 Timestamp Timestamp::FromIsoString(const std::string& iso_str) {
-  std::tm tm = {};
-  std::stringstream ss(iso_str);
-  ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+  std::chrono::sys_seconds parsed_tp;
+  std::istringstream in{iso_str};
+  
+  in >> std::chrono::parse("%Y-%m-%dT%H:%M:%SZ", parsed_tp);
 
-  if (ss.fail()) {
+  if (in.fail()) {
     throw ValidationError("Timestamp", "Invalid ISO 8601 format");
   }
 
-  using namespace std::chrono;
-  auto date = sys_days{year{tm.tm_year + 1900} / (tm.tm_mon + 1) / tm.tm_mday};
-  auto time = hours{tm.tm_hour} + minutes{tm.tm_min} + seconds{tm.tm_sec};
-
-  return Timestamp(system_clock::time_point(date + time));
+  return Timestamp(parsed_tp);
 }
 
 }  // namespace core

@@ -17,38 +17,6 @@ Metadata::Metadata(ID id, Title title, TagList tags)
 Entity::Entity(Metadata meta, std::string content)
     : meta_(std::move(meta)), content_(std::move(content)), is_dirty_(true) {}
 
-Entity::Entity(Entity&& other) noexcept
-    : meta_(std::move(other.meta_)),
-      content_(std::move(other.content_)),
-      parent_(other.parent_),
-      children_(std::move(other.children_)),
-      is_dirty_(other.is_dirty_) {
-  for (auto& child : children_) {
-    if (child) {
-      child->parent_ = this;
-    }
-  }
-  other.parent_ = nullptr;
-}
-
-Entity& Entity::operator=(Entity&& other) noexcept {
-  if (this != &other) {
-    meta_ = std::move(other.meta_);
-    content_ = std::move(other.content_);
-    parent_ = other.parent_;
-    children_ = std::move(other.children_);
-    is_dirty_ = other.is_dirty_;
-
-    for (auto& child : children_) {
-      if (child) {
-        child->parent_ = this;
-      }
-    }
-    other.parent_ = nullptr;
-  }
-  return *this;
-}
-
 void Entity::SetContent(std::string content) {
   content_ = std::move(content);
   UpdateTimestamp();
