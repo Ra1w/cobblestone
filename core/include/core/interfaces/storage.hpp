@@ -11,7 +11,13 @@ namespace core::interfaces {
 
 class IStorage {
  public:
+  IStorage() = default;
   virtual ~IStorage() = default;
+
+  IStorage(const IStorage&) = delete;
+  IStorage& operator=(const IStorage&) = delete;
+  IStorage(IStorage&&) = delete;
+  IStorage& operator=(IStorage&&) = delete;
 
   virtual std::future<void> SaveAsync(const entities::Entity& entity) = 0;
 

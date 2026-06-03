@@ -39,6 +39,11 @@ std::future<void> MarkdownStorage::SaveAsync(
 
   {
     std::lock_guard lock(queue_mutex_);
+    if (!running_) {
+      task->promise.set_exception(std::make_exception_ptr(
+          core::SystemError("Storage worker is shutting down")));
+      return future;
+    }
     tasks_.push(std::move(task));
   }
   cv_.notify_one();
@@ -142,6 +147,9 @@ void MarkdownStorage::Remove(const core::ID& id) {
 
   {
     std::lock_guard lock(queue_mutex_);
+    if (!running_) {
+      return;
+    }
     tasks_.push(std::move(task));
   }
   cv_.notify_one();

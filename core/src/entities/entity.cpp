@@ -90,9 +90,7 @@ std::unique_ptr<Entity> Entity::RemoveChild(const ID& id) {
 std::generator<Entity*> Entity::WalkTree() {
   co_yield this;
   for (const auto& child : children_) {
-    for (auto* descendant : child->WalkTree()) {
-      co_yield descendant;
-    }
+    co_yield std::ranges::elements_of(child->WalkTree());
   }
 }
 

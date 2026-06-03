@@ -36,10 +36,14 @@ void LifeEngine::Load() {
   std::vector<Link> pending_links;
 
   for (auto& entry : entries) {
-    if (entry.parent_id.has_value()) {
-      pending_links.push_back({entry.entity->GetId(), *entry.parent_id});
+    try {
+      if (entry.parent_id.has_value()) {
+        pending_links.push_back({entry.entity->GetId(), *entry.parent_id});
+      }
+      registry_.Add(std::move(entry.entity));
+    } catch (const core::LogicError& e) {
+      std::println(stderr, "Skipping corrupted/duplicate entry: {}", e.what());
     }
-    registry_.Add(std::move(entry.entity));
   }
 
   for (const auto& link : pending_links) {

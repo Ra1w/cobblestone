@@ -95,17 +95,17 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
     throw ct::PersistenceError("MarkdownSerializer: Missing mandatory field [type]");
   }
 
-  ct::ID id(yaml_map["id"]);
-  ct::Title title(yaml_map.contains("title") ? yaml_map["title"] : "");
-  auto tags = ParseTags(yaml_map.contains("tags") ? yaml_map["tags"] : "");
+  ct::ID id(yaml_map.at("id"));
+  ct::Title title(yaml_map.contains("title") ? yaml_map.at("title") : "");
+  auto tags = ParseTags(yaml_map.contains("tags") ? yaml_map.at("tags") : "");
   auto created = ct::Timestamp::FromIsoString(
-      yaml_map.contains("created_at") ? yaml_map["created_at"] : "");
+      yaml_map.contains("created_at") ? yaml_map.at("created_at") : "");
   auto updated = ct::Timestamp::FromIsoString(
-      yaml_map.contains("updated_at") ? yaml_map["updated_at"] : "");
+      yaml_map.contains("updated_at") ? yaml_map.at("updated_at") : "");
 
   std::optional<ct::ID> parent_id;
-  if (yaml_map.contains("parent") && yaml_map["parent"] != "null") {
-    parent_id = ct::ID(yaml_map["parent"]);
+  if (yaml_map.contains("parent") && yaml_map.at("parent") != "null") {
+    parent_id = ct::ID(yaml_map.at("parent"));
   }
 
   ce::Metadata meta(id, title, tags);
@@ -113,8 +113,8 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
   meta.updated_at = updated;
 
   std::unique_ptr<ce::Entity> entity;
-  if (yaml_map["type"] == "task") {
-    std::string s_str = yaml_map.contains("status") ? yaml_map["status"] : "todo";
+  if (yaml_map.at("type") == "task") {
+    std::string s_str = yaml_map.contains("status") ? yaml_map.at("status") : "todo";
     ct::TaskStatus s = ct::TaskStatus::Todo;
     if (s_str == "done") {
       s = ct::TaskStatus::Done;

@@ -8,6 +8,12 @@ namespace core {
 class StringWrapper {
  public:
   virtual ~StringWrapper() = default;
+
+  StringWrapper(const StringWrapper&) = default;
+  StringWrapper& operator=(const StringWrapper&) = default;
+  StringWrapper(StringWrapper&&) noexcept = default;
+  StringWrapper& operator=(StringWrapper&&) noexcept = default;
+
   const std::string& Str() const { return value_; }
 
  protected:
