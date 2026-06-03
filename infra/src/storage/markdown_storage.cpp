@@ -91,6 +91,9 @@ void MarkdownStorage::WorkerLoop() {
           }
         }
         task->promise.set_value();
+      } catch (const std::exception& e) {
+        std::cerr << "Storage worker exception: " << e.what() << "\n";
+        task->promise.set_exception(std::current_exception());
       } catch (...) {
         task->promise.set_exception(std::current_exception());
       }
@@ -106,23 +109,29 @@ std::vector<core::interfaces::PersistenceEntry> MarkdownStorage::LoadAll() {
     return entries;
   }
 
-  for (const auto& entry : std::filesystem::directory_iterator(base_path_)) {
-    if (entry.is_regular_file() && entry.path().extension() == ".md") {
-      std::ifstream file(entry.path());
-      if (file.is_open()) {
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        try {
-          entries.push_back(
-              infra::serialization::MarkdownSerializer::Deserialize(
-                  buffer.str()));
-        } catch (const core::CoreException& e) {
-          std::cerr << "[Critical] Failed to load " << entry.path() << ": "
-                    << e.what() << "\n";
+  try {
+    for (const auto& entry : std::filesystem::directory_iterator(base_path_)) {
+      if (entry.is_regular_file() && entry.path().extension() == ".md") {
+        std::ifstream file(entry.path());
+        if (file.is_open()) {
+          std::stringstream buffer;
+          buffer << file.rdbuf();
+          try {
+            entries.push_back(
+                infra::serialization::MarkdownSerializer::Deserialize(
+                    buffer.str()));
+          } catch (const core::CoreException& e) {
+            std::cerr << "[Critical] Failed to load " << entry.path() << ": "
+                      << e.what() << "\n";
+          }
         }
       }
     }
+  } catch (const std::filesystem::filesystem_error& e) {
+    std::cerr << "[Critical] Filesystem error while reading directory: "
+              << e.what() << "\n";
   }
+
   return entries;
 }
 
