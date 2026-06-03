@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <print>
 #include <ranges>
 
@@ -103,6 +104,7 @@ void LifeEngine::CreateTask(const core::Title& title,
       core::entities::Metadata(core::ID::Generate(), title, {}), content);
   command_manager_.InvokeMake<commands::AddEntityCommand>(
       registry_, storage_.get(), std::move(task));
+  SaveAll();
 }
 
 void LifeEngine::CreateNote(const core::Title& title,
@@ -111,22 +113,26 @@ void LifeEngine::CreateNote(const core::Title& title,
       core::entities::Metadata(core::ID::Generate(), title, {}), content);
   command_manager_.InvokeMake<commands::AddEntityCommand>(
       registry_, storage_.get(), std::move(note));
+  SaveAll();
 }
 
 void LifeEngine::RemoveEntity(const core::ID& id) {
   command_manager_.InvokeMake<commands::DeleteEntityCommand>(
       registry_, storage_.get(), id);
+  SaveAll();
 }
 
 void LifeEngine::MoveEntity(const core::ID& entity_id,
                             std::optional<core::ID> parent_id) {
   command_manager_.Invoke(std::make_unique<commands::MoveEntityCommand>(
       registry_, entity_id, parent_id));
+  SaveAll();
 }
 
 void LifeEngine::EditEntity(const core::ID& id, commands::EditAction action) {
   command_manager_.Invoke(std::make_unique<commands::EditEntityCommand>(
       registry_, id, std::move(action)));
+  SaveAll();
 }
 
 void LifeEngine::Undo() {
