@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <chrono>
-#include <ranges>
 #include <print>
+#include <ranges>
 
 #include "app/commands/add_entity_command.hpp"
 #include "app/commands/delete_entity_command.hpp"
@@ -62,7 +62,9 @@ void LifeEngine::SaveAll() {
     if (f.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
       try {
         f.get();
-      } catch (const std::exception&) {
+      } catch (const std::exception& e) {
+        std::println(stderr, "Critical Error during background save: {}",
+                     e.what());
       }
       return true;
     }
@@ -81,7 +83,8 @@ void LifeEngine::WaitAllSaves() {
     if (f.valid()) {
       try {
         f.get();
-      } catch (const std::exception&) {
+      } catch (const std::exception& e) {
+        std::println(stderr, "Critical Error waiting for save: {}", e.what());
       }
     }
   }
@@ -210,20 +213,24 @@ std::vector<core::entities::Task*> LifeEngine::GetTasks(
 std::vector<core::entities::Entity*> LifeEngine::Search(
     const std::string& query) const {
   std::string lower_query = query;
-  std::transform(lower_query.begin(), lower_query.end(), lower_query.begin(),
-                 ::tolower);
+  std::transform(
+      lower_query.begin(), lower_query.end(), lower_query.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
   auto results =
       registry_.FindIf([&lower_query](const core::entities::Entity& e) {
         std::string title = e.GetMetadata().title.Str();
-        std::transform(title.begin(), title.end(), title.begin(), ::tolower);
+        std::transform(
+            title.begin(), title.end(), title.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         if (title.find(lower_query) != std::string::npos) {
           return true;
         }
 
         std::string content = e.GetContent();
-        std::transform(content.begin(), content.end(), content.begin(),
-                       ::tolower);
+        std::transform(
+            content.begin(), content.end(), content.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         if (content.find(lower_query) != std::string::npos) {
           return true;
         }
