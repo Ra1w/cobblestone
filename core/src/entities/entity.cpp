@@ -1,6 +1,7 @@
 #include "core/entities/entity.hpp"
 
 #include <algorithm>
+#include <ranges>
 
 #include "core/exceptions.hpp"
 
@@ -80,6 +81,13 @@ std::unique_ptr<Entity> Entity::RemoveChild(const ID& id) {
     return removed;
   }
   return nullptr;
+}
+
+std::generator<Entity*> Entity::WalkTree() {
+  co_yield this;
+  for (const auto& child : children_) {
+    co_yield std::ranges::elements_of(child->WalkTree());
+  }
 }
 
 }  // namespace core::entities

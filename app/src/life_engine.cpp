@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <ranges>
 
 #include "app/commands/add_entity_command.hpp"
 #include "app/commands/delete_entity_command.hpp"
@@ -89,9 +90,8 @@ void LifeEngine::CreateTask(const core::Title& title,
                             const std::string& content) {
   auto task = std::make_unique<core::entities::Task>(
       core::entities::Metadata(core::ID::Generate(), title, {}), content);
-
-  command_manager_.Invoke(
-      std::make_unique<commands::AddEntityCommand>(registry_, std::move(task)));
+  command_manager_.InvokeMake<commands::AddEntityCommand>(registry_,
+                                                          std::move(task));
 }
 
 void LifeEngine::CreateNote(const core::Title& title,
@@ -99,8 +99,8 @@ void LifeEngine::CreateNote(const core::Title& title,
   auto note = std::make_unique<core::entities::Note>(
       core::entities::Metadata(core::ID::Generate(), title, {}), content);
 
-  command_manager_.Invoke(
-      std::make_unique<commands::AddEntityCommand>(registry_, std::move(note)));
+  command_manager_.InvokeMake<commands::AddEntityCommand>(registry_,
+                                                          std::move(note));
 }
 
 void LifeEngine::RemoveEntity(const core::ID& id) {
@@ -175,8 +175,7 @@ std::vector<core::entities::Entity*> LifeEngine::GetRootEntities() const {
 std::vector<core::entities::Entity*> LifeEngine::FindByTag(
     const core::Tag& tag) const {
   auto results = registry_.FindIf([&tag](const core::entities::Entity& e) {
-    const auto& tags = e.GetMetadata().tags;
-    return std::find(tags.begin(), tags.end(), tag) != tags.end();
+    return std::ranges::contains(e.GetMetadata().tags, tag);
   });
   SortByUpdateDate(results);
   return results;
@@ -198,11 +197,10 @@ std::vector<core::entities::Task*> LifeEngine::GetTasks(
 
   SortByUpdateDate(entities);
 
-  std::vector<core::entities::Task*> tasks;
-  tasks.reserve(entities.size());
-  for (auto* e : entities) {
-    tasks.push_back(static_cast<core::entities::Task*>(e));
-  }
+  auto tasks = entities | std::views::transform([](auto* e) {
+                 return static_cast<core::entities::Task*>(e);
+               }) |
+               std::ranges::to<std::vector>();
 
   return tasks;
 }

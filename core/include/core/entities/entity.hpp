@@ -1,5 +1,6 @@
 #pragma once
 
+#include <generator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -52,8 +53,9 @@ class Entity {
   std::unique_ptr<Entity> RemoveChild(const ID& id);
 
   virtual EntityType GetType() const = 0;
-
   virtual std::unique_ptr<Entity> Clone() const = 0;
+
+  std::generator<Entity*> WalkTree();
 
  protected:
   Metadata meta_;

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <deque>
+#include <utility>
 
 #include "app/commands/command.hpp"
 
@@ -16,6 +17,13 @@ class CommandManager {
   CommandManager& operator=(const CommandManager&) = delete;
 
   void Invoke(std::unique_ptr<ICommand> command);
+
+  template <typename TCommand, typename... Args>
+  decltype(auto) InvokeMake(Args&&... args) {
+    auto cmd = std::make_unique<TCommand>(std::forward<Args>(args)...);
+    Invoke(std::move(cmd));
+  }
+
   void Undo();
   void Redo();
 
