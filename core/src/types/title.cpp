@@ -3,10 +3,10 @@
 namespace core {
 
 Title::Title(std::string value) : StringWrapper(std::move(value)) {
-  size_t first = value_.find_first_not_of(" ");
+  size_t first = value_.find_first_not_of(" \t\r\n");
   if (first != std::string::npos) {
     value_.erase(0, first);
-    size_t last = value_.find_last_not_of(" ");
+    size_t last = value_.find_last_not_of(" \t\r\n");
     if (last != std::string::npos) {
       value_.erase(last + 1);
     }
