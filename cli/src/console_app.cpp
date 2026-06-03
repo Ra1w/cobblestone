@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <cctype>
-#include <format>
+#include <cstdio>
 #include <iostream>
 #include <optional>
-#include <sstream>
+#include <print>
+#include <ranges>
+#include <string>
 
 #include "core/entities/task.hpp"
 #include "core/exceptions.hpp"
@@ -17,22 +19,24 @@ ConsoleApp::ConsoleApp(app::LifeEngine& engine) : engine_(engine) {}
 void ConsoleApp::Run() {
   try {
     engine_.Load();
-    std::cout << "Life Gamificator 2026: Workspace loaded successfully.\n";
+    std::println("Life Gamificator 2026: Workspace loaded successfully.");
   } catch (const core::CoreException& e) {
-    std::cout << std::format("Warning during load: {}\n", e.what());
+    std::println("Warning during load: {}", e.what());
   }
 
-  std::cout << "Welcome! Type 'help' to see available commands.\n";
+  std::println("Welcome! Type 'help' to see available commands.");
 
   std::string line;
   while (running_) {
-    std::cout << "\n> ";
+    std::print("\n> ");
     if (!std::getline(std::cin, line)) {
       break;
     }
+
     if (line.empty()) {
       continue;
     }
+
     ProcessInput(line);
   }
 }
@@ -40,7 +44,7 @@ void ConsoleApp::Run() {
 void ConsoleApp::ProcessInput(const std::string& input) {
   try {
     if (input == "exit" || input == "quit") {
-      std::cout << "Saving changes and exiting...\n";
+      std::println("Saving changes and exiting...");
       engine_.SaveAll();
       engine_.WaitAllSaves();
       running_ = false;
@@ -82,60 +86,61 @@ void ConsoleApp::ProcessInput(const std::string& input) {
       Redo();
     } else if (input == "save") {
       engine_.SaveAll();
-      std::cout << "All data has been queued for saving.\n";
+      std::println("All data has been queued for saving.");
     } else {
-      std::cout << "Unknown command. Type 'help' for a list of commands.\n";
+      std::println("Unknown command. Type 'help' for a list of commands.");
     }
   } catch (const core::ValidationError& e) {
-    std::cout << std::format("Input Validation Error: {}\n", e.what());
+    std::println("Input Validation Error: {}", e.what());
   } catch (const core::NotFoundError& e) {
-    std::cout << std::format("Not Found: {}\n", e.what());
+    std::println("Not Found: {}", e.what());
   } catch (const core::PersistenceError& e) {
-    std::cout << std::format("Data Storage Error: {}\n", e.what());
+    std::println("Data Storage Error: {}", e.what());
   } catch (const core::CoreException& e) {
-    std::cout << std::format("Error: {}\n", e.what());
+    std::println("Error: {}", e.what());
   } catch (const std::logic_error& e) {
-    std::cerr << std::format("CRITICAL SOFTWARE BUG: {}\n", e.what());
-    std::cerr
-        << "The application state may be corrupted. Please report this.\n";
+    std::println(stderr, "CRITICAL SOFTWARE BUG: {}", e.what());
+    std::println(stderr,
+                 "The application state may be corrupted. Please report this.");
   } catch (const std::exception& e) {
-    std::cerr << std::format("Unknown System Error: {}\n", e.what());
+    std::println(stderr, "Unknown System Error: {}", e.what());
   }
 }
 
 void ConsoleApp::ShowHelp() {
-  std::cout << "Navigation & View:\n"
-            << "  ls       - Show hierarchy tree (sorted by new)\n"
-            << "  tasks    - List all tasks (can filter by status)\n"
-            << "  view     - Full view of an entity (ID required)\n"
-            << "Creation & Modification:\n"
-            << "  add-t    - Create new Task\n"
-            << "  add-n    - Create new Note\n"
-            << "  edit     - Overwrite entity content\n"
-            << "  append   - Add text to the end of entity content\n"
-            << "  rename   - Change entity title\n"
-            << "  status   - Change Task status (todo/inprogress/done)\n"
-            << "  tag-add  - Add tag to entity\n"
-            << "  tag-rm   - Remove tag from entity\n"
-            << "  mv       - Move entity to another parent\n"
-            << "  rm       - Delete entity\n"
-            << "Search & System:\n"
-            << "  search   - Full-text search in title and content\n"
-            << "  find-tag - Search entities by tag\n"
-            << "  undo     - Rollback last action\n"
-            << "  redo     - Repeat last undone action\n"
-            << "  save     - Force save to disk\n"
-            << "  exit     - Quit application\n";
+  std::println(
+      "Navigation & View:\n"
+      "  ls       - Show hierarchy tree (sorted by new)\n"
+      "  tasks    - List all tasks (can filter by status)\n"
+      "  view     - Full view of an entity (ID required)\n"
+      "Creation & Modification:\n"
+      "  add-t    - Create new Task\n"
+      "  add-n    - Create new Note\n"
+      "  edit     - Overwrite entity content\n"
+      "  append   - Add text to the end of entity content\n"
+      "  rename   - Change entity title\n"
+      "  status   - Change Task status (todo/inprogress/done)\n"
+      "  tag-add  - Add tag to entity\n"
+      "  tag-rm   - Remove tag from entity\n"
+      "  mv       - Move entity to another parent\n"
+      "  rm       - Delete entity\n"
+      "Search & System:\n"
+      "  search   - Full-text search in title and content\n"
+      "  find-tag - Search entities by tag\n"
+      "  undo     - Rollback last action\n"
+      "  redo     - Repeat last undone action\n"
+      "  save     - Force save to disk\n"
+      "  exit     - Quit application");
 }
 
 void ConsoleApp::ListRoot() {
   auto roots = engine_.GetRootEntities();
   if (roots.empty()) {
-    std::cout << "The knowledge base is currently empty.\n";
+    std::println("The knowledge base is currently empty.");
     return;
   }
 
-  std::cout << "\nKnowledge Tree:\n";
+  std::println("\nKnowledge Tree:");
   for (const auto* root : roots) {
     PrintTree(*root, 0);
   }
@@ -160,9 +165,9 @@ void ConsoleApp::PrintTree(const core::entities::Entity& entity, int depth) {
     }
   }
 
-  std::cout << std::format("{}|-- {} {}{} (ID: {})\n", indent, type_label,
-                           entity.GetMetadata().title.Str(), status_info,
-                           entity.GetId().Str());
+  std::println("{}|-- {} {}{} (ID: {})", indent, type_label,
+               entity.GetMetadata().title.Str(), status_info,
+               entity.GetId().Str());
 
   for (const auto& child : entity.GetChildren()) {
     PrintTree(*child, depth + 1);
@@ -170,7 +175,7 @@ void ConsoleApp::PrintTree(const core::entities::Entity& entity, int depth) {
 }
 
 void ConsoleApp::ViewEntity() {
-  std::cout << "Enter Entity ID: ";
+  std::print("Enter Entity ID: ");
   std::string input;
   std::getline(std::cin, input);
 
@@ -178,20 +183,20 @@ void ConsoleApp::ViewEntity() {
   auto* entity = engine_.GetEntity(id);
 
   if (!entity) {
-    std::cout << "Entity not found.\n";
+    std::println("Entity not found.");
     return;
   }
 
   const auto& meta = entity->GetMetadata();
-  std::cout << "\n==================================================\n";
-  std::cout << std::format("TITLE:   {}\n", meta.title.Str());
-  std::cout << std::format("ID:      {}\n", meta.id.Str());
+  std::println("\n==================================================");
+  std::println("TITLE:   {}", meta.title.Str());
+  std::println("ID:      {}", meta.id.Str());
 
   std::string type_str = "Note";
   if (entity->GetType() == core::EntityType::Task) {
     type_str = "Task";
   }
-  std::cout << std::format("TYPE:    {}\n", type_str);
+  std::println("TYPE:    {}", type_str);
 
   if (entity->GetType() == core::EntityType::Task) {
     auto status = static_cast<core::entities::Task*>(entity)->GetStatus();
@@ -201,65 +206,69 @@ void ConsoleApp::ViewEntity() {
     } else if (status == core::TaskStatus::InProgress) {
       s_str = "In Progress";
     }
-    std::cout << std::format("STATUS:  {}\n", s_str);
+    std::println("STATUS:  {}", s_str);
   }
 
   std::string tags_str;
   for (const auto& t : meta.tags) {
     tags_str += "[" + t.Str() + "] ";
   }
+
   if (tags_str.empty()) {
     tags_str = "None";
   }
-  std::cout << std::format("TAGS:    {}\n", tags_str);
 
-  std::cout << std::format("CREATED: {}\n", meta.created_at.ToIsoString());
-  std::cout << std::format("UPDATED: {}\n", meta.updated_at.ToIsoString());
-  std::cout << "--------------------------------------------------\n";
-  std::cout << "CONTENT:\n" << entity->GetContent() << "\n";
-  std::cout << "==================================================\n";
+  std::println("TAGS:    {}", tags_str);
+  std::println("CREATED: {}", meta.created_at.ToIsoString());
+  std::println("UPDATED: {}", meta.updated_at.ToIsoString());
+  std::println("--------------------------------------------------");
+  std::println("CONTENT:\n{}", entity->GetContent());
+  std::println("==================================================");
 }
 
 void ConsoleApp::CreateTask() {
+  std::print("Task Title: ");
   std::string title_raw;
-  std::string content;
-  std::cout << "Task Title: ";
   std::getline(std::cin, title_raw);
-  std::cout << "Content: ";
+
+  std::print("Content: ");
+  std::string content;
   std::getline(std::cin, content);
 
   engine_.CreateTask(core::Title(title_raw), content);
-  std::cout << "Task created successfully.\n";
+  std::println("Task created successfully.");
 }
 
 void ConsoleApp::CreateNote() {
+  std::print("Note Title: ");
   std::string title_raw;
-  std::string content;
-  std::cout << "Note Title: ";
   std::getline(std::cin, title_raw);
-  std::cout << "Content: ";
+
+  std::print("Content: ");
+  std::string content;
   std::getline(std::cin, content);
 
   engine_.CreateNote(core::Title(title_raw), content);
-  std::cout << "Note created successfully.\n";
+  std::println("Note created successfully.");
 }
 
 void ConsoleApp::DeleteEntity() {
-  std::cout << "Enter ID to delete: ";
+  std::print("Enter ID to delete: ");
   std::string input;
   std::getline(std::cin, input);
 
   core::ID id = engine_.ResolveId(input);
   engine_.RemoveEntity(id);
-  std::cout << "Entity and its file marked for deletion.\n";
+  std::println("Entity and its file marked for deletion.");
 }
 
 void ConsoleApp::MoveEntity() {
+  std::print("Enter Entity ID to move: ");
   std::string child_input;
-  std::string parent_input;
-  std::cout << "Enter Entity ID to move: ";
   std::getline(std::cin, child_input);
-  std::cout << "Enter New Parent ID (or leave empty for root): ";
+
+  std::print("Enter New Parent ID (or leave empty for root): ");
+  std::string parent_input;
   std::getline(std::cin, parent_input);
 
   core::ID child_id = engine_.ResolveId(child_input);
@@ -270,45 +279,69 @@ void ConsoleApp::MoveEntity() {
   }
 
   engine_.MoveEntity(child_id, p_id);
-  std::cout << "Entity moved successfully.\n";
+  std::println("Entity moved successfully.");
 }
 
 void ConsoleApp::EditContent() {
+  std::print("Enter Entity ID: ");
   std::string input;
-  std::string new_content;
-  std::cout << "Enter Entity ID: ";
   std::getline(std::cin, input);
-  std::cout << "Enter New Content: ";
+
+  std::print("Enter New Content: ");
+  std::string new_content;
   std::getline(std::cin, new_content);
 
   core::ID id = engine_.ResolveId(input);
   engine_.EditEntity(id, [new_content](core::entities::Entity& e) {
     e.SetContent(new_content);
   });
-  std::cout << "Content updated.\n";
+  std::println("Content updated.");
+}
+
+void ConsoleApp::AppendContent() {
+  std::print("Enter Entity ID: ");
+  std::string input;
+  std::getline(std::cin, input);
+
+  std::print("Enter Text to Append: ");
+  std::string append_text;
+  std::getline(std::cin, append_text);
+
+  core::ID id = engine_.ResolveId(input);
+  engine_.EditEntity(id, [append_text](core::entities::Entity& e) {
+    std::string current = e.GetContent();
+    if (!current.empty() && current.back() != '\n') {
+      current += "\n";
+    }
+    current += append_text;
+    e.SetContent(current);
+  });
+  std::println("Content appended.");
 }
 
 void ConsoleApp::RenameEntity() {
+  std::print("Enter Entity ID: ");
   std::string input;
-  std::string new_title;
-  std::cout << "Enter Entity ID: ";
   std::getline(std::cin, input);
-  std::cout << "Enter New Title: ";
+
+  std::print("Enter New Title: ");
+  std::string new_title;
   std::getline(std::cin, new_title);
 
   core::ID id = engine_.ResolveId(input);
   engine_.EditEntity(id, [new_title](core::entities::Entity& e) {
     e.SetTitle(core::Title(new_title));
   });
-  std::cout << "Entity renamed.\n";
+  std::println("Entity renamed.");
 }
 
 void ConsoleApp::SetStatus() {
+  std::print("Enter Task ID: ");
   std::string input;
-  std::string status_str;
-  std::cout << "Enter Task ID: ";
   std::getline(std::cin, input);
-  std::cout << "New Status (todo / inprogress / done): ";
+
+  std::print("New Status (todo / inprogress / done): ");
+  std::string status_str;
   std::getline(std::cin, status_str);
 
   core::ID id = engine_.ResolveId(input);
@@ -321,30 +354,32 @@ void ConsoleApp::SetStatus() {
       throw core::CommandError("Target entity is not a Task.");
     }
   });
-  std::cout << "Status updated.\n";
+  std::println("Status updated.");
 }
 
 void ConsoleApp::Undo() {
   if (engine_.CanUndo()) {
     engine_.Undo();
-    std::cout << "Undo successful.\n";
+    std::println("Undo successful.");
   } else {
-    std::cout << "History is empty. Nothing to undo.\n";
+    std::println("History is empty. Nothing to undo.");
   }
 }
 
 void ConsoleApp::Redo() {
   if (engine_.CanRedo()) {
     engine_.Redo();
-    std::cout << "Redo successful.\n";
+    std::println("Redo successful.");
   } else {
-    std::cout << "Nothing to redo.\n";
+    std::println("Nothing to redo.");
   }
 }
 
 core::TaskStatus ConsoleApp::ParseStatus(const std::string& status_str) {
   std::string s = status_str;
-  std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+  std::ranges::transform(s, s.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
 
   if (s == "done") {
     return core::TaskStatus::Done;
@@ -363,11 +398,12 @@ core::TaskStatus ConsoleApp::ParseStatus(const std::string& status_str) {
 }
 
 void ConsoleApp::AddTag() {
+  std::print("Enter Entity ID: ");
   std::string input;
-  std::string tag_str;
-  std::cout << "Enter Entity ID: ";
   std::getline(std::cin, input);
-  std::cout << "Enter Tag: ";
+
+  std::print("Enter Tag: ");
+  std::string tag_str;
   std::getline(std::cin, tag_str);
 
   core::ID id = engine_.ResolveId(input);
@@ -375,20 +411,22 @@ void ConsoleApp::AddTag() {
 
   engine_.EditEntity(id, [new_tag](core::entities::Entity& e) {
     auto tags = e.GetMetadata().tags;
-    if (std::find(tags.begin(), tags.end(), new_tag) == tags.end()) {
+
+    if (!std::ranges::contains(tags, new_tag)) {
       tags.push_back(new_tag);
       e.SetTags(tags);
     }
   });
-  std::cout << "Tag added.\n";
+  std::println("Tag added.");
 }
 
 void ConsoleApp::RemoveTag() {
+  std::print("Enter Entity ID: ");
   std::string input;
-  std::string tag_str;
-  std::cout << "Enter Entity ID: ";
   std::getline(std::cin, input);
-  std::cout << "Enter Tag: ";
+
+  std::print("Enter Tag: ");
+  std::string tag_str;
   std::getline(std::cin, tag_str);
 
   core::ID id = engine_.ResolveId(input);
@@ -396,43 +434,78 @@ void ConsoleApp::RemoveTag() {
 
   engine_.EditEntity(id, [target_tag](core::entities::Entity& e) {
     auto tags = e.GetMetadata().tags;
-    auto it = std::remove(tags.begin(), tags.end(), target_tag);
-    if (it != tags.end()) {
-      tags.erase(it, tags.end());
+
+    if (std::erase(tags, target_tag) > 0) {
       e.SetTags(tags);
     }
   });
-  std::cout << "Tag removed (if it existed).\n";
+  std::println("Tag removed (if it existed).");
 }
 
 void ConsoleApp::FindByTag() {
+  std::print("Enter Tag to search: ");
   std::string tag_str;
-  std::cout << "Enter Tag to search: ";
   std::getline(std::cin, tag_str);
 
   core::Tag search_tag(tag_str);
   auto results = engine_.FindByTag(search_tag);
 
   if (results.empty()) {
-    std::cout << "No entities found with tag [" << tag_str << "].\n";
+    std::println("No entities found with tag [{}].", tag_str);
     return;
   }
 
-  std::cout << "\nSearch Results:\n";
+  std::println("\nSearch Results:");
   for (const auto* e : results) {
     std::string type_label = "[N]";
     if (e->GetType() == core::EntityType::Task) {
       type_label = "[T]";
     }
-    std::cout << std::format("{} {} (ID: {})\n", type_label,
-                             e->GetMetadata().title.Str(), e->GetId().Str());
+    std::println("{} {} (ID: {})", type_label, e->GetMetadata().title.Str(),
+                 e->GetId().Str());
+  }
+}
+
+void ConsoleApp::SearchText() {
+  std::print("Enter search query: ");
+  std::string query;
+  std::getline(std::cin, query);
+
+  if (query.empty()) {
+    std::println("Query cannot be empty.");
+    return;
+  }
+
+  auto results = engine_.Search(query);
+
+  if (results.empty()) {
+    std::println("No matches found for [{}].", query);
+    return;
+  }
+
+  std::println("\nSearch Results:");
+  for (const auto* e : results) {
+    std::string type_label = "[N]";
+    if (e->GetType() == core::EntityType::Task) {
+      type_label = "[T]";
+    }
+
+    std::string snippet = e->GetContent();
+    if (snippet.length() > 50) {
+      snippet = snippet.substr(0, 47) + "...";
+    }
+
+    std::ranges::replace(snippet, '\n', ' ');
+
+    std::println("{} {} (ID: {})\n      Content: {}", type_label,
+                 e->GetMetadata().title.Str(), e->GetId().Str(), snippet);
   }
 }
 
 void ConsoleApp::ListTasks() {
+  std::print(
+      "Enter status filter (todo/inprogress/done) or leave empty for all: ");
   std::string status_input;
-  std::cout
-      << "Enter status filter (todo/inprogress/done) or leave empty for all: ";
   std::getline(std::cin, status_input);
 
   std::optional<core::TaskStatus> filter;
@@ -442,11 +515,11 @@ void ConsoleApp::ListTasks() {
 
   auto tasks = engine_.GetTasks(filter);
   if (tasks.empty()) {
-    std::cout << "No tasks found matching criteria.\n";
+    std::println("No tasks found matching criteria.");
     return;
   }
 
-  std::cout << "\nTasks List:\n";
+  std::println("\nTasks List:");
   for (const auto* t : tasks) {
     std::string status_info;
     auto status = t->GetStatus();
@@ -459,65 +532,8 @@ void ConsoleApp::ListTasks() {
       status_info = "[TODO]";
     }
 
-    std::cout << std::format("{} {} (ID: {})\n", status_info,
-                             t->GetMetadata().title.Str(), t->GetId().Str());
-  }
-}
-
-void ConsoleApp::AppendContent() {
-  std::string input;
-  std::string append_text;
-  std::cout << "Enter Entity ID: ";
-  std::getline(std::cin, input);
-  std::cout << "Enter Text to Append: ";
-  std::getline(std::cin, append_text);
-
-  core::ID id = engine_.ResolveId(input);
-  engine_.EditEntity(id, [append_text](core::entities::Entity& e) {
-    std::string current = e.GetContent();
-    if (!current.empty() && current.back() != '\n') {
-      current += "\n";
-    }
-    current += append_text;
-    e.SetContent(current);
-  });
-  std::cout << "Content appended.\n";
-}
-
-void ConsoleApp::SearchText() {
-  std::string query;
-  std::cout << "Enter search query: ";
-  std::getline(std::cin, query);
-
-  if (query.empty()) {
-    std::cout << "Query cannot be empty.\n";
-    return;
-  }
-
-  auto results = engine_.Search(query);
-
-  if (results.empty()) {
-    std::cout << "No matches found for [" << query << "].\n";
-    return;
-  }
-
-  std::cout << "\nSearch Results:\n";
-  for (const auto* e : results) {
-    std::string type_label = "[N]";
-    if (e->GetType() == core::EntityType::Task) {
-      type_label = "[T]";
-    }
-
-    std::string snippet = e->GetContent();
-    if (snippet.length() > 50) {
-      snippet = snippet.substr(0, 47) + "...";
-    }
-
-    std::replace(snippet.begin(), snippet.end(), '\n', ' ');
-
-    std::cout << std::format("{} {} (ID: {})\n      Content: {}\n", type_label,
-                             e->GetMetadata().title.Str(), e->GetId().Str(),
-                             snippet);
+    std::println("{} {} (ID: {})", status_info, t->GetMetadata().title.Str(),
+                 t->GetId().Str());
   }
 }
 
