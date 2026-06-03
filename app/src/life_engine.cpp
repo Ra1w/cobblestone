@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <ranges>
+#include <print>
 
 #include "app/commands/add_entity_command.hpp"
 #include "app/commands/delete_entity_command.hpp"
@@ -44,6 +45,10 @@ void LifeEngine::Load() {
     try {
       registry_.MoveEntity(link.child_id, link.parent_id);
     } catch (const core::CoreException& e) {
+      std::println(
+          stderr,
+          "Warning: Failed to restore link for child [{}] to parent [{}]: {}",
+          link.child_id.Str(), link.parent_id.Str(), e.what());
     }
   }
 }
@@ -67,9 +72,6 @@ void LifeEngine::SaveAll() {
   auto all_entities = registry_.FindIf([](const auto&) { return true; });
 
   for (auto* entity : all_entities) {
-    if (pending_saves_.size() > 50) {
-      WaitAllSaves();
-    }
     pending_saves_.push_back(storage_->SaveAsync(*entity));
   }
 }
