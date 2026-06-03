@@ -91,7 +91,8 @@ void MarkdownStorage::WorkerLoop() {
 
 std::vector<core::interfaces::PersistenceEntry> MarkdownStorage::LoadAll() {
   std::vector<core::interfaces::PersistenceEntry> entries;
-  if (!std::filesystem::exists(base_path_)) {
+  
+  if (!std::filesystem::exists(base_path_) || !std::filesystem::is_directory(base_path_)) {
     return entries;
   }
 

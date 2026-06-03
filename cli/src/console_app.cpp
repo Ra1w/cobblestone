@@ -42,49 +42,63 @@ void ConsoleApp::Run() {
 }
 
 void ConsoleApp::ProcessInput(const std::string& input) {
+  std::string command = input;
+  
+  size_t first = command.find_first_not_of(" \t\r\n");
+  if (first != std::string::npos) {
+    command = command.substr(first);
+  } else {
+    return;
+  }
+  
+  size_t last = command.find_last_not_of(" \t\r\n");
+  if (last != std::string::npos) {
+    command = command.substr(0, last + 1);
+  }
+
   try {
-    if (input == "exit" || input == "quit") {
+    if (command == "exit" || command == "quit") {
       std::println("Saving changes and exiting...");
       engine_.SaveAll();
       engine_.WaitAllSaves();
       running_ = false;
-    } else if (input == "help") {
+    } else if (command == "help") {
       ShowHelp();
-    } else if (input == "ls") {
+    } else if (command == "ls") {
       ListRoot();
-    } else if (input == "tasks") {
+    } else if (command == "tasks") {
       ListTasks();
-    } else if (input == "view") {
+    } else if (command == "view") {
       ViewEntity();
-    } else if (input == "add-t") {
+    } else if (command == "add-t") {
       CreateTask();
-    } else if (input == "add-n") {
+    } else if (command == "add-n") {
       CreateNote();
-    } else if (input == "rm") {
+    } else if (command == "rm") {
       DeleteEntity();
-    } else if (input == "mv") {
+    } else if (command == "mv") {
       MoveEntity();
-    } else if (input == "edit") {
+    } else if (command == "edit") {
       EditContent();
-    } else if (input == "append") {
+    } else if (command == "append") {
       AppendContent();
-    } else if (input == "rename") {
+    } else if (command == "rename") {
       RenameEntity();
-    } else if (input == "status") {
+    } else if (command == "status") {
       SetStatus();
-    } else if (input == "tag-add") {
+    } else if (command == "tag-add") {
       AddTag();
-    } else if (input == "tag-rm") {
+    } else if (command == "tag-rm") {
       RemoveTag();
-    } else if (input == "find-tag") {
+    } else if (command == "find-tag") {
       FindByTag();
-    } else if (input == "search") {
+    } else if (command == "search") {
       SearchText();
-    } else if (input == "undo") {
+    } else if (command == "undo") {
       Undo();
-    } else if (input == "redo") {
+    } else if (command == "redo") {
       Redo();
-    } else if (input == "save") {
+    } else if (command == "save") {
       engine_.SaveAll();
       std::println("All data has been queued for saving.");
     } else {

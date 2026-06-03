@@ -86,30 +86,26 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
     content = raw_content.substr(end_of_header_line + 1);
   }
 
-  std::string id_raw = ExtractYamlValue(yaml, "id");
-  if (id_raw.empty()) {
-    throw ct::PersistenceError(
-        "MarkdownSerializer: Missing mandatory field [id]");
+  auto yaml_map = ParseYamlBlock(yaml);
+
+  if (!yaml_map.contains("id")) {
+    throw ct::PersistenceError("MarkdownSerializer: Missing mandatory field [id]");
+  }
+  if (!yaml_map.contains("type")) {
+    throw ct::PersistenceError("MarkdownSerializer: Missing mandatory field [type]");
   }
 
-  std::string type = ExtractYamlValue(yaml, "type");
-  if (type.empty()) {
-    throw ct::PersistenceError(
-        "MarkdownSerializer: Missing mandatory field [type]");
-  }
+  ct::ID id(yaml_map["id"]);
+  ct::Title title(yaml_map.contains("title") ? yaml_map["title"] : "");
+  auto tags = ParseTags(yaml_map.contains("tags") ? yaml_map["tags"] : "");
+  auto created = ct::Timestamp::FromIsoString(
+      yaml_map.contains("created_at") ? yaml_map["created_at"] : "");
+  auto updated = ct::Timestamp::FromIsoString(
+      yaml_map.contains("updated_at") ? yaml_map["updated_at"] : "");
 
-  ct::ID id(id_raw);
-  ct::Title title(ExtractYamlValue(yaml, "title"));
-  auto tags = ParseTags(ExtractYamlValue(yaml, "tags"));
-  auto created =
-      ct::Timestamp::FromIsoString(ExtractYamlValue(yaml, "created_at"));
-  auto updated =
-      ct::Timestamp::FromIsoString(ExtractYamlValue(yaml, "updated_at"));
-
-  std::string p_raw = ExtractYamlValue(yaml, "parent");
   std::optional<ct::ID> parent_id;
-  if (!p_raw.empty() && p_raw != "null") {
-    parent_id = ct::ID(p_raw);
+  if (yaml_map.contains("parent") && yaml_map["parent"] != "null") {
+    parent_id = ct::ID(yaml_map["parent"]);
   }
 
   ce::Metadata meta(id, title, tags);
@@ -117,8 +113,8 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
   meta.updated_at = updated;
 
   std::unique_ptr<ce::Entity> entity;
-  if (type == "task") {
-    std::string s_str = ExtractYamlValue(yaml, "status");
+  if (yaml_map["type"] == "task") {
+    std::string s_str = yaml_map.contains("status") ? yaml_map["status"] : "todo";
     ct::TaskStatus s = ct::TaskStatus::Todo;
     if (s_str == "done") {
       s = ct::TaskStatus::Done;
@@ -133,24 +129,36 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
   return {std::move(entity), parent_id};
 }
 
-std::string MarkdownSerializer::ExtractYamlValue(const std::string& yaml,
-                                                 const std::string& key) {
+std::unordered_map<std::string, std::string> MarkdownSerializer::ParseYamlBlock(
+    const std::string& yaml) {
+  std::unordered_map<std::string, std::string> result;
   std::stringstream ss(yaml);
   std::string line;
-  std::string target = key + ":";
 
   while (std::getline(ss, line)) {
-    if (line.starts_with(target)) {
-      std::string val = line.substr(target.length());
-      size_t first = val.find_first_not_of(" \r\t");
-      if (first == std::string::npos) {
-        return "";
+    size_t colon_pos = line.find(':');
+    if (colon_pos != std::string::npos) {
+      std::string key = line.substr(0, colon_pos);
+      std::string val = line.substr(colon_pos + 1);
+
+      size_t k_first = key.find_first_not_of(" \r\t");
+      if (k_first != std::string::npos) {
+        key = key.substr(k_first, key.find_last_not_of(" \r\t") - k_first + 1);
+      } else {
+        continue;
       }
-      size_t last = val.find_last_not_of(" \r\t");
-      return val.substr(first, (last - first + 1));
+
+      size_t v_first = val.find_first_not_of(" \r\t");
+      if (v_first != std::string::npos) {
+        val = val.substr(v_first, val.find_last_not_of(" \r\t") - v_first + 1);
+      } else {
+        val = "";
+      }
+
+      result[key] = val;
     }
   }
-  return "";
+  return result;
 }
 
 std::vector<ct::Tag> MarkdownSerializer::ParseTags(
