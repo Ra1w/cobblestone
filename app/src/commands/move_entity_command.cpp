@@ -26,7 +26,18 @@ void MoveEntityCommand::Execute() {
 }
 
 void MoveEntityCommand::Undo() {
-  registry_.MoveEntity(entity_id_, old_parent_id_);
+  if (registry_.Get(entity_id_) == nullptr) {
+    return;
+  }
+
+  try {
+    registry_.MoveEntity(entity_id_, old_parent_id_);
+  } catch (const core::CoreException&) {
+    try {
+      registry_.MoveEntity(entity_id_, std::nullopt);
+    } catch (...) {
+    }
+  }
 }
 
 }  // namespace app::commands

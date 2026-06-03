@@ -2,9 +2,8 @@
 
 #include <atomic>
 #include <chrono>
-#include <iomanip>
+#include <format>
 #include <random>
-#include <sstream>
 
 namespace core {
 
@@ -30,22 +29,16 @@ void ID::Validate(const std::string& value) {
 ID ID::Generate() {
   thread_local std::random_device rd;
   thread_local std::mt19937 gen(rd());
-  thread_local std::uniform_int_distribution<> dis(0, 15);
+  thread_local std::uniform_int_distribution<uint32_t> dis(0, 0xFFFFFFFF);
   static std::atomic<uint64_t> counter{0};
 
-  std::stringstream ss;
-
-  for (int i = 0; i < 12; ++i) {
-    ss << std::hex << dis(gen);
-  }
-
   auto now = std::chrono::system_clock::now().time_since_epoch().count();
+  uint64_t c = counter.fetch_add(1);
 
-  ss << "-" << std::hex << std::setw(4) << std::setfill('0') << (now % 0xFFFF);
-  ss << "-" << std::hex << std::setw(4) << std::setfill('0')
-     << (counter.fetch_add(1) % 0xFFFF);
+  std::string result = std::format("{:08x}{:04x}-{:04x}-{:04x}", dis(gen),
+                                   dis(gen) & 0xFFFF, now % 0xFFFF, c % 0xFFFF);
 
-  return ID(ss.str());
+  return ID(std::move(result));
 }
 
 }  // namespace core

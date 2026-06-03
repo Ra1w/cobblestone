@@ -68,19 +68,29 @@ std::string MarkdownSerializer::Serialize(const ce::Entity& entity) {
 
 ci::PersistenceEntry MarkdownSerializer::Deserialize(
     const std::string& raw_content) {
-  const std::string sep = "---";
-  size_t first_sep = raw_content.find(sep);
-  size_t second_sep = raw_content.find(sep, first_sep + sep.length());
+  const std::string start_sep = "---";
+  const std::string end_sep = "\n---";
 
-  if (first_sep == std::string::npos || second_sep == std::string::npos) {
+  size_t first_sep = raw_content.find(start_sep);
+
+  if (first_sep != 0) {
     throw ct::PersistenceError(
-        "MarkdownSerializer: Invalid file format (YAML header missing)");
+        "MarkdownSerializer: Invalid file format (YAML header must be at the "
+        "very beginning of the file)");
   }
 
-  std::string yaml = raw_content.substr(
-      first_sep + sep.length(), second_sep - (first_sep + sep.length()));
+  size_t second_sep = raw_content.find(end_sep, first_sep + start_sep.length());
+  if (second_sep == std::string::npos) {
+    throw ct::PersistenceError(
+        "MarkdownSerializer: Invalid file format (YAML header not closed)");
+  }
 
-  size_t end_of_header_line = raw_content.find('\n', second_sep + sep.length());
+  std::string yaml =
+      raw_content.substr(first_sep + start_sep.length(),
+                         second_sep - (first_sep + start_sep.length()));
+
+  size_t end_of_header_line =
+      raw_content.find('\n', second_sep + end_sep.length());
   std::string content = "";
   if (end_of_header_line != std::string::npos) {
     content = raw_content.substr(end_of_header_line + 1);
@@ -89,10 +99,12 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
   auto yaml_map = ParseYamlBlock(yaml);
 
   if (!yaml_map.contains("id")) {
-    throw ct::PersistenceError("MarkdownSerializer: Missing mandatory field [id]");
+    throw ct::PersistenceError(
+        "MarkdownSerializer: Missing mandatory field [id]");
   }
   if (!yaml_map.contains("type")) {
-    throw ct::PersistenceError("MarkdownSerializer: Missing mandatory field [type]");
+    throw ct::PersistenceError(
+        "MarkdownSerializer: Missing mandatory field [type]");
   }
 
   ct::ID id(yaml_map.at("id"));
@@ -114,7 +126,8 @@ ci::PersistenceEntry MarkdownSerializer::Deserialize(
 
   std::unique_ptr<ce::Entity> entity;
   if (yaml_map.at("type") == "task") {
-    std::string s_str = yaml_map.contains("status") ? yaml_map.at("status") : "todo";
+    std::string s_str =
+        yaml_map.contains("status") ? yaml_map.at("status") : "todo";
     ct::TaskStatus s = ct::TaskStatus::Todo;
     if (s_str == "done") {
       s = ct::TaskStatus::Done;
@@ -177,9 +190,9 @@ std::vector<ct::Tag> MarkdownSerializer::ParseTags(
   std::stringstream ss(clean);
   std::string t;
   while (std::getline(ss, t, ',')) {
-    size_t first = t.find_first_not_of(" ");
+    size_t first = t.find_first_not_of(" \t\r\n");
     if (first != std::string::npos) {
-      size_t last = t.find_last_not_of(" ");
+      size_t last = t.find_last_not_of(" \t\r\n");
       res.emplace_back(t.substr(first, (last - first + 1)));
     }
   }

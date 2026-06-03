@@ -30,9 +30,12 @@ void AddEntityCommand::Execute() {
 }
 
 void AddEntityCommand::Undo() {
-  entity_ = registry_.Remove(id_);
-  if (storage_ != nullptr) {
-    storage_->Remove(id_);
+  try {
+    entity_ = registry_.Remove(id_);
+    if (storage_ != nullptr) {
+      storage_->Remove(id_);
+    }
+  } catch (const core::NotFoundError&) {
   }
 }
 

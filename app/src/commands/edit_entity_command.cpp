@@ -18,7 +18,17 @@ void EditEntityCommand::Execute() {
   }
 
   memento_ = entity->CloneWithoutChildren();
-  action_(*entity);
+  bool was_dirty = entity->IsDirty();
+  
+  try {
+    action_(*entity);
+  } catch (...) {
+    entity->RestoreStateFrom(*memento_);
+    if (!was_dirty) {
+      entity->ClearDirty();
+    }
+    throw;
+  }
 }
 
 void EditEntityCommand::Undo() {

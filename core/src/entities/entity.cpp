@@ -43,6 +43,12 @@ void Entity::UpdateTimestamp() {
   is_dirty_ = true;
 }
 
+void Entity::ForceDirty() { is_dirty_ = true; }
+
+void Entity::SetUpdatedAt(const Timestamp& timestamp) {
+  meta_.updated_at = timestamp;
+}
+
 void Entity::AddChild(std::unique_ptr<Entity> child) {
   if (!child) {
     throw LogicError(

@@ -42,10 +42,17 @@ void DeleteEntityCommand::Undo() {
     e->MarkDirty();
   }
 
-  registry_.Add(std::move(entity_));
+  try {
+    registry_.Add(std::move(entity_));
+  } catch (const core::LogicError&) {
+    return;
+  }
 
   if (parent_id_.has_value()) {
-    registry_.MoveEntity(restored_id, *parent_id_);
+    try {
+      registry_.MoveEntity(restored_id, *parent_id_);
+    } catch (const core::NotFoundError&) {
+    }
   }
 }
 

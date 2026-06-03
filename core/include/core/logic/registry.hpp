@@ -2,9 +2,9 @@
 
 #include <concepts>
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
-#include <unordered_map>
 #include <vector>
 
 #include "core/exceptions.hpp"
@@ -124,12 +124,20 @@ class Registry {
 
   ID ResolveId(const std::string& prefix) const {
     std::vector<ID> matches;
-    for (const auto& [id, ptr] : all_entities_) {
-      if (id.Str() == prefix) {
-        return id;
+    
+    core::ID dummy_id(prefix); 
+    auto it = all_entities_.lower_bound(dummy_id);
+
+    while (it != all_entities_.end()) {
+      if (it->first.Str() == prefix) {
+        return it->first;
       }
-      if (id.Str().starts_with(prefix)) {
-        matches.push_back(id);
+      
+      if (it->first.Str().starts_with(prefix)) {
+        matches.push_back(it->first);
+        ++it;
+      } else {
+        break;
       }
     }
 
@@ -169,8 +177,8 @@ class Registry {
   }
 
  private:
-  std::unordered_map<ID, std::unique_ptr<T>> roots_;
-  std::unordered_map<ID, T*> all_entities_;
+  std::map<ID, std::unique_ptr<T>> roots_;
+  std::map<ID, T*> all_entities_;
 
   void RegisterRecursive(T* entity) {
     if (entity == nullptr) {

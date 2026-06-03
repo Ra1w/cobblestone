@@ -74,22 +74,30 @@ void MarkdownStorage::WorkerLoop() {
           std::filesystem::path tmp_path = task->path;
           tmp_path += ".tmp";
 
-          std::ofstream file(tmp_path, std::ios::trunc);
-          if (!file.is_open()) {
-            throw core::SystemError("Cannot open file: " + tmp_path.string());
-          }
+          try {
+            std::ofstream file(tmp_path, std::ios::trunc);
+            if (!file.is_open()) {
+              throw core::SystemError("Cannot open file: " + tmp_path.string());
+            }
 
-          file << task->content;
-          file.flush();
+            file << task->content;
+            file.flush();
 
-          if (!file) {
+            if (!file) {
+              throw core::SystemError("Failed to write data to file: " +
+                                      tmp_path.string());
+            }
             file.close();
-            throw core::SystemError("Failed to write data to file: " +
-                                    tmp_path.string());
-          }
-          file.close();
 
-          std::filesystem::rename(tmp_path, task->path);
+            std::filesystem::rename(tmp_path, task->path);
+          } catch (...) {
+            if (std::filesystem::exists(tmp_path)) {
+              std::error_code ec;
+              std::filesystem::remove(tmp_path, ec);
+            }
+            throw;
+          }
+
         } else if (task->type == StorageTask::Type::Remove) {
           if (std::filesystem::exists(task->path)) {
             std::filesystem::remove(task->path);

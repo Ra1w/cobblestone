@@ -48,7 +48,20 @@ void LifeEngine::Load() {
 
   for (const auto& link : pending_links) {
     try {
-      registry_.MoveEntity(link.child_id, link.parent_id);
+      auto* child = registry_.Get(link.child_id);
+      auto* parent = registry_.Get(link.parent_id);
+
+      if (child != nullptr && parent != nullptr) {
+        auto child_ts = child->GetMetadata().updated_at;
+        auto parent_ts = parent->GetMetadata().updated_at;
+
+        registry_.MoveEntity(link.child_id, link.parent_id);
+
+        child->SetUpdatedAt(child_ts);
+        parent->SetUpdatedAt(parent_ts);
+      } else {
+        registry_.MoveEntity(link.child_id, link.parent_id);
+      }
     } catch (const core::CoreException& e) {
       std::println(
           stderr,
@@ -67,13 +80,16 @@ void LifeEngine::SaveAll() {
     return;
   }
 
-  std::erase_if(pending_saves_, [](std::future<void>& f) {
-    if (f.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+  std::erase_if(pending_saves_, [this](PendingSave& task) {
+    if (task.future.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
       try {
-        f.get();
+        task.future.get();
       } catch (const std::exception& e) {
-        std::println(stderr, "Critical Error during background save: {}",
-                     e.what());
+        std::println(stderr, "Critical Error during background save for [{}]: {}",
+                     task.entity_id.Str(), e.what());
+        if (auto* e_ptr = registry_.Get(task.entity_id)) {
+          e_ptr->ForceDirty();
+        }
       }
       return true;
     }
@@ -84,18 +100,22 @@ void LifeEngine::SaveAll() {
       registry_.FindIf([](const auto& e) { return e.IsDirty(); });
 
   for (auto* entity : dirty_entities) {
-    pending_saves_.push_back(storage_->SaveAsync(*entity));
+    pending_saves_.push_back({entity->GetId(), storage_->SaveAsync(*entity)});
     entity->ClearDirty();
   }
 }
 
 void LifeEngine::WaitAllSaves() {
-  for (auto& f : pending_saves_) {
-    if (f.valid()) {
+  for (auto& task : pending_saves_) {
+    if (task.future.valid()) {
       try {
-        f.get();
+        task.future.get();
       } catch (const std::exception& e) {
-        std::println(stderr, "Critical Error waiting for save: {}", e.what());
+        std::println(stderr, "Critical Error waiting for save [{}]: {}", 
+                     task.entity_id.Str(), e.what());
+        if (auto* e_ptr = registry_.Get(task.entity_id)) {
+          e_ptr->ForceDirty();
+        }
       }
     }
   }
@@ -205,31 +225,33 @@ std::vector<core::entities::Task*> LifeEngine::GetTasks(
 
 std::vector<core::entities::Entity*> LifeEngine::Search(
     const std::string& query) const {
-  std::string lower_query = query;
-  std::transform(
-      lower_query.begin(), lower_query.end(), lower_query.begin(),
-      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  if (query.empty()) {
+    return {};
+  }
 
-  auto results =
-      registry_.FindIf([&lower_query](const core::entities::Entity& e) {
-        std::string title = e.GetMetadata().title.Str();
-        std::transform(
-            title.begin(), title.end(), title.begin(),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        if (title.find(lower_query) != std::string::npos) {
-          return true;
-        }
+  auto case_insensitive_equals = [](unsigned char ch1, unsigned char ch2) {
+    return std::tolower(ch1) == std::tolower(ch2);
+  };
 
-        std::string content = e.GetContent();
-        std::transform(
-            content.begin(), content.end(), content.begin(),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        if (content.find(lower_query) != std::string::npos) {
-          return true;
-        }
+  auto results = registry_.FindIf([&query, &case_insensitive_equals](
+                                      const core::entities::Entity& e) {
+    const std::string& title = e.GetMetadata().title.Str();
 
-        return false;
-      });
+    auto title_it = std::search(title.begin(), title.end(), query.begin(),
+                                query.end(), case_insensitive_equals);
+    if (title_it != title.end()) {
+      return true;
+    }
+
+    const std::string& content = e.GetContent();
+    auto content_it = std::search(content.begin(), content.end(), query.begin(),
+                                  query.end(), case_insensitive_equals);
+    if (content_it != content.end()) {
+      return true;
+    }
+
+    return false;
+  });
 
   SortByUpdateDate(results);
   return results;

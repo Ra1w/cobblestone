@@ -57,11 +57,16 @@ class LifeEngine {
   core::ID ResolveId(const std::string& prefix) const;
 
  private:
+  struct PendingSave {
+    core::ID entity_id;
+    std::future<void> future;
+  };
+
   core::logic::Registry<core::entities::Entity> registry_;
   commands::CommandManager command_manager_;
   std::unique_ptr<core::interfaces::IStorage> storage_;
 
-  std::vector<std::future<void>> pending_saves_;
+  std::vector<PendingSave> pending_saves_;
 
   static void SortByUpdateDate(std::vector<core::entities::Entity*>& list);
 };

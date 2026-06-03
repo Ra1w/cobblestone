@@ -59,6 +59,8 @@ class Entity {
   bool IsDirty() const { return is_dirty_; }
   void ClearDirty() { is_dirty_ = false; }
   void MarkDirty() { is_dirty_ = true; UpdateTimestamp(); }
+  void ForceDirty();
+  void SetUpdatedAt(const Timestamp& timestamp);
 
  protected:
   Metadata meta_;
