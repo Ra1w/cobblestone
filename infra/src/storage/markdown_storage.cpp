@@ -71,6 +71,11 @@ void MarkdownStorage::WorkerLoop() {
             throw core::SystemError("Cannot open file: " + task->path.string());
           }
           file << task->content;
+
+          if (!file) {
+            throw core::SystemError("Failed to write data to file: " +
+                                    task->path.string());
+          }
         } else if (task->type == StorageTask::Type::Remove) {
           if (std::filesystem::exists(task->path)) {
             std::filesystem::remove(task->path);
