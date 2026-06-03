@@ -4,7 +4,7 @@
 
 namespace core::entities {
 
-class Note : public Entity {
+class Note final : public Entity {
  public:
   using Entity::Entity;
 

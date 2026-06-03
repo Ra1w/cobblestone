@@ -9,7 +9,7 @@
 
 namespace app::commands {
 
-class DeleteEntityCommand : public ICommand {
+class DeleteEntityCommand final : public ICommand {
  public:
   DeleteEntityCommand(core::logic::Registry<core::entities::Entity>& registry,
                       const core::ID& id);

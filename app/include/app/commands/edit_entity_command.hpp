@@ -8,7 +8,7 @@
 
 namespace app::commands {
 
-class EditEntityCommand : public ICommand {
+class EditEntityCommand final : public ICommand {
  public:
   EditEntityCommand(core::logic::Registry<core::entities::Entity>& registry,
                     const core::ID& id, EditAction action);

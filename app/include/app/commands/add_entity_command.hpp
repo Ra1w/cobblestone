@@ -6,7 +6,7 @@
 
 namespace app::commands {
 
-class AddEntityCommand : public ICommand {
+class AddEntityCommand final : public ICommand {
  public:
   AddEntityCommand(core::logic::Registry<core::entities::Entity>& registry,
                    std::unique_ptr<core::entities::Entity> entity);

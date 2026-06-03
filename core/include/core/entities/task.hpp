@@ -4,7 +4,7 @@
 
 namespace core::entities {
 
-class Task : public Entity {
+class Task final : public Entity {
  public:
   Task(Metadata meta, std::string content = "",
        TaskStatus status = TaskStatus::Todo);

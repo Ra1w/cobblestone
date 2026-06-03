@@ -8,7 +8,7 @@
 
 namespace app::commands {
 
-class MoveEntityCommand : public ICommand {
+class MoveEntityCommand final : public ICommand {
  public:
   MoveEntityCommand(core::logic::Registry<core::entities::Entity>& registry,
                     const core::ID& entity_id,
