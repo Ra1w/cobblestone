@@ -23,6 +23,9 @@ void AddEntityCommand::Execute() {
     throw core::LogicError(
         "AddEntityCommand: Entity is null (already executed?)");
   }
+
+  entity_->MarkDirty();
+
   registry_.Add(std::move(entity_));
 }
 

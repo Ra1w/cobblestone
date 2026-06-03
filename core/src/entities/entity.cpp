@@ -21,7 +21,8 @@ Entity::Entity(Entity&& other) noexcept
     : meta_(std::move(other.meta_)),
       content_(std::move(other.content_)),
       parent_(other.parent_),
-      children_(std::move(other.children_)) {
+      children_(std::move(other.children_)),
+      is_dirty_(other.is_dirty_) {
   for (auto& child : children_) {
     if (child) {
       child->parent_ = this;
@@ -36,6 +37,7 @@ Entity& Entity::operator=(Entity&& other) noexcept {
     content_ = std::move(other.content_);
     parent_ = other.parent_;
     children_ = std::move(other.children_);
+    is_dirty_ = other.is_dirty_;
 
     for (auto& child : children_) {
       if (child) {
