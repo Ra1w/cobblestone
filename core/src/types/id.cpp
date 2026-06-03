@@ -34,15 +34,16 @@ ID ID::Generate() {
   static std::atomic<uint64_t> counter{0};
 
   std::stringstream ss;
-  ss << std::hex << std::setfill('0');
 
   for (int i = 0; i < 12; ++i) {
-    ss << dis(gen);
+    ss << std::hex << dis(gen);
   }
 
   auto now = std::chrono::system_clock::now().time_since_epoch().count();
-  ss << "-" << std::hex << (now % 0xFFFF);
-  ss << "-" << std::hex << (counter.fetch_add(1) % 0xFFFF);
+
+  ss << "-" << std::hex << std::setw(4) << std::setfill('0') << (now % 0xFFFF);
+  ss << "-" << std::hex << std::setw(4) << std::setfill('0')
+     << (counter.fetch_add(1) % 0xFFFF);
 
   return ID(ss.str());
 }
